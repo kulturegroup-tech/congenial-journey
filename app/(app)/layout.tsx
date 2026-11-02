@@ -1,6 +1,8 @@
 import { Suspense, type ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/sidebar";
+import { BellMenu } from "@/components/bell";
+import { createClient } from "@/lib/supabase/server";
 import { SignOutButton } from "@/components/sign-out-button";
 import { NotOnTeam, SetupNotice } from "@/components/notices";
 import { TableSkeleton } from "@/components/ui";
@@ -13,6 +15,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen">
       <Sidebar
+        top={
+          <Suspense fallback={null}>
+            <Bell />
+          </Suspense>
+        }
         footer={
           <Suspense fallback={<div className="h-9" />}>
             <UserMenu />
@@ -49,4 +56,21 @@ async function UserMenu() {
       <SignOutButton />
     </div>
   );
+}
+
+async function Bell() {
+  if (!isSupabaseConfigured) return null;
+  const session = await getSession();
+  if (session.state !== "member") return null;
+  const supabase = await createClient();
+  const [{ data }, { count }] = await Promise.all([
+    supabase
+      .from("notifications")
+      .select("id, title, body, mandate_id, candidate_id, read_at, created_at")
+      .eq("recipient_id", session.member.id)
+      .order("created_at", { ascending: false })
+      .limit(12),
+    supabase.from("notifications").select("id", { count: "exact", head: true }).eq("recipient_id", session.member.id).is("read_at", null),
+  ]);
+  return <BellMenu notes={data ?? []} unread={count ?? 0} />;
 }

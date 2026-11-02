@@ -61,3 +61,37 @@ export function formatPqeRange(min: number | null, max: number | null, grade?: s
   if (min != null && max != null) return `${Number(min)}–${Number(max)} yrs`;
   return min != null ? `${Number(min)}+ yrs` : `up to ${Number(max)} yrs`;
 }
+
+/** Rupees with paise, Indian grouping: ₹2,47,800.00 */
+export function formatMoney(rupees: number | null | undefined) {
+  if (rupees == null) return "—";
+  return "₹" + new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(rupees);
+}
+
+const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+function twoDigits(n: number) {
+  return n < 20 ? ones[n] : `${tens[Math.floor(n / 10)]}${n % 10 ? "-" + ones[n % 10] : ""}`;
+}
+function threeDigits(n: number) {
+  const h = Math.floor(n / 100);
+  const r = n % 100;
+  return [h ? `${ones[h]} Hundred` : "", r ? twoDigits(r) : ""].filter(Boolean).join(" ");
+}
+
+/** Amount in words, Indian system, for invoices: "Rupees Two Lakh Forty-Seven Thousand Eight Hundred Only". */
+export function rupeesInWords(amount: number) {
+  const rupees = Math.floor(amount);
+  const paise = Math.round((amount - rupees) * 100);
+  const parts: string[] = [];
+  const crore = Math.floor(rupees / 10_000_000);
+  const lakh = Math.floor((rupees % 10_000_000) / 100_000);
+  const thousand = Math.floor((rupees % 100_000) / 1000);
+  const rest = rupees % 1000;
+  if (crore) parts.push(`${threeDigits(crore)} Crore`);
+  if (lakh) parts.push(`${twoDigits(lakh)} Lakh`);
+  if (thousand) parts.push(`${twoDigits(thousand)} Thousand`);
+  if (rest) parts.push(threeDigits(rest));
+  const words = parts.join(" ") || "Zero";
+  return `Rupees ${words}${paise ? ` and ${twoDigits(paise)} Paise` : ""} Only`;
+}

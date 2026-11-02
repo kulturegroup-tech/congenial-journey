@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { Badge, Empty, Page, PageHeader, Table, TableSkeleton } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
@@ -13,7 +14,32 @@ type Reminder = {
   due_on: string | null;
   title: string;
   ref_id: string;
+  mandate_id: string | null;
+  candidate_id: string | null;
+  client_id: string | null;
 };
+
+// Where each reminder is dealt with.
+function hrefFor(r: Reminder) {
+  switch (r.kind) {
+    case "invoice_to_raise":
+    case "replacement_window_ending":
+      return "/billing";
+    case "payment_due":
+    case "payment_overdue":
+      return `/billing/invoices/${r.ref_id}`;
+    case "call_today":
+      return `/candidates/${r.candidate_id}/call?scheduled=${r.ref_id}${r.mandate_id ? `&mandate=${r.mandate_id}` : ""}`;
+    case "follow_up":
+      return `/candidates/${r.candidate_id}`;
+    case "stale_mandate":
+      return `/mandates/${r.mandate_id}`;
+    case "agreement_expiring":
+      return `/clients/${r.client_id}`;
+    default:
+      return r.mandate_id ? `/mandates/${r.mandate_id}` : "/reminders";
+  }
+}
 
 const kindLabel: Record<string, string> = {
   invoice_to_raise: "Raise invoice",
@@ -50,14 +76,14 @@ export default function RemindersPage() {
   );
 }
 
-type Alert = { id: string; title: string; body: string | null; recipient_id: string; created_at: string; read_at: string | null };
+type Alert = { id: string; title: string; body: string | null; recipient_id: string; created_at: string; read_at: string | null; mandate_id: string | null; candidate_id: string | null };
 
 async function ReengagementList() {
   const supabase = await createClient();
   const [{ data, error }, team] = await Promise.all([
     supabase
       .from("notifications")
-      .select("id, title, body, recipient_id, created_at, read_at")
+      .select("id, title, body, recipient_id, created_at, read_at, mandate_id, candidate_id")
       .eq("kind", "reengagement")
       .order("created_at", { ascending: false })
       .limit(25),
@@ -71,7 +97,11 @@ async function ReengagementList() {
     <Table head={["Match", "Why", "For", "When"]}>
       {rows.map((n) => (
         <tr key={n.id}>
-          <td className="font-medium">{n.title}</td>
+          <td>
+            <Link href={n.mandate_id ? `/mandates/${n.mandate_id}` : `/candidates/${n.candidate_id}`} className={`font-medium hover:text-accent ${n.read_at ? "text-muted" : ""}`}>
+              {n.title}
+            </Link>
+          </td>
           <td>
             <div className="flex flex-wrap gap-1.5">
               {(n.body ?? "").split(" · ").filter(Boolean).map((reason) => (
@@ -92,7 +122,7 @@ async function ReengagementList() {
 async function ReminderList() {
   const supabase = await createClient();
   const [{ data, error }, team] = await Promise.all([
-    supabase.from("v_reminders").select("kind, recipient_id, due_on, title, ref_id").order("due_on", { ascending: true }),
+    supabase.from("v_reminders").select("kind, recipient_id, due_on, title, ref_id, mandate_id, candidate_id, client_id").order("due_on", { ascending: true }),
     getTeamNames(),
   ]);
   if (error) return <Empty title="Couldn't load reminders">{error.message}</Empty>;
@@ -109,7 +139,11 @@ async function ReminderList() {
               <span className={overdue ? "font-medium text-danger" : ""}>{formatDate(r.due_on)}</span>
               <div className="text-[12px] text-muted">{r.due_on ? ago(r.due_on) : ""}</div>
             </td>
-            <td>{r.title}</td>
+            <td>
+              <Link href={hrefFor(r)} className="hover:text-accent">
+                {r.title}
+              </Link>
+            </td>
             <td>
               <Badge tone={r.kind === "payment_overdue" || r.kind === "invoice_to_raise" ? "danger" : r.kind === "stale_mandate" ? "warn" : "neutral"}>
                 {kindLabel[r.kind] ?? r.kind}

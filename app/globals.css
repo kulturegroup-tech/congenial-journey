@@ -29,3 +29,22 @@ body {
 ::selection {
   background: var(--color-accent-soft);
 }
+
+/* Printing an invoice: only the sheet. */
+@media print {
+  aside,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+  main > div {
+    padding: 0 !important;
+  }
+  .print-sheet {
+    border: 0 !important;
+    max-width: none !important;
+    padding: 0 !important;
+  }
+}
