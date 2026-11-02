@@ -1,6 +1,6 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -24,9 +24,13 @@ function explain(error: { code?: string; message: string }) {
 
 export function LoginForm() {
   const params = useSearchParams();
-  const next = params.get("next") ?? "/";
+  const router = useRouter();
+  const nextParam = params.get("next") ?? "/";
+  const next = nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/";
+  const [mode, setMode] = useState<"pin" | "link">("pin");
   const [email, setEmail] = useState("");
-  const [busy, setBusy] = useState<null | "google" | "email">(null);
+  const [pin, setPin] = useState("");
+  const [busy, setBusy] = useState<null | "google" | "email" | "pin">(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(errors[params.get("error") ?? ""] ?? null);
 
@@ -43,6 +47,24 @@ export function LoginForm() {
       setMessage(error.message);
       setBusy(null);
     }
+  }
+
+  // Email + PIN: a Supabase password. PINs are set by an admin for now (see README).
+  async function withPin(e: FormEvent) {
+    e.preventDefault();
+    setBusy("pin");
+    setMessage(null);
+    const { error } = await createClient().auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password: pin.trim(),
+    });
+    if (error) {
+      setBusy(null);
+      setMessage(error.code === "invalid_credentials" ? "That email and PIN don't match." : explain(error));
+      return;
+    }
+    router.replace(next);
+    router.refresh();
   }
 
   async function withEmail(e: FormEvent) {
@@ -90,23 +112,65 @@ export function LoginForm() {
           </div>
         </>
       ) : null}
-      <form onSubmit={withEmail} className="space-y-3">
-        <input
-          type="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@paradigmshifters.in"
-          className="w-full rounded-lg border border-line px-3 py-2.5 outline-none focus:border-accent"
-        />
-        <button
-          type="submit"
-          disabled={busy !== null}
-          className="w-full rounded-lg border border-line px-4 py-2.5 font-medium hover:bg-canvas disabled:opacity-60"
-        >
-          {busy === "email" ? "Sending…" : "Email me a sign-in link"}
-        </button>
-      </form>
+      {mode === "pin" ? (
+        <form onSubmit={withPin} className="space-y-3">
+          <input
+            type="email"
+            required
+            autoFocus
+            autoComplete="username"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email"
+            className="w-full rounded-lg border border-line px-3 py-2.5 outline-none focus:border-accent"
+          />
+          <input
+            type="password"
+            required
+            inputMode="numeric"
+            autoComplete="current-password"
+            value={pin}
+            onChange={(e) => setPin(e.target.value)}
+            placeholder="PIN"
+            className="w-full rounded-lg border border-line px-3 py-2.5 tracking-widest outline-none focus:border-accent"
+          />
+          <button
+            type="submit"
+            disabled={busy !== null}
+            className="w-full rounded-lg bg-accent px-4 py-2.5 font-medium text-white hover:opacity-95 disabled:opacity-60"
+          >
+            {busy === "pin" ? "Signing in…" : "Sign in"}
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={withEmail} className="space-y-3">
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@paradigmshifters.in"
+            className="w-full rounded-lg border border-line px-3 py-2.5 outline-none focus:border-accent"
+          />
+          <button
+            type="submit"
+            disabled={busy !== null}
+            className="w-full rounded-lg border border-line px-4 py-2.5 font-medium hover:bg-canvas disabled:opacity-60"
+          >
+            {busy === "email" ? "Sending…" : "Email me a sign-in link"}
+          </button>
+        </form>
+      )}
+      <button
+        type="button"
+        onClick={() => {
+          setMode(mode === "pin" ? "link" : "pin");
+          setMessage(null);
+        }}
+        className="mt-4 w-full text-center text-[13px] text-muted hover:text-ink"
+      >
+        {mode === "pin" ? "Email me a sign-in link instead" : "Use my PIN instead"}
+      </button>
     </div>
   );
 }

@@ -44,6 +44,17 @@ select id, 'Khyati Shrestha', email, true from auth.users where email = 'khyati@
 
 Until someone has a `team_members` row, they see an "Almost there" screen and no data.
 
+### Email + PIN sign-in (temporary, until Google or SMTP is set up)
+
+The login page signs in with email + PIN by default. A PIN is a Supabase password, set by an admin in the SQL editor for a user who already exists in `auth.users`:
+
+```sql
+update auth.users set encrypted_password = extensions.crypt('<6-digit PIN>', extensions.gen_salt('bf')), updated_at = now()
+where email = '<their email>';
+```
+
+To create a brand-new user with a PIN, use Supabase → Authentication → Users → Add user → "Create new user" (tick "Auto confirm"). Replace PINs with Google sign-in before real data goes in.
+
 ## Database changes
 
 Add a new file in `supabase/migrations/` (never edit an applied one), run `npm run test:db`, then apply it to the Supabase project.
