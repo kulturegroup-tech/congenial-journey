@@ -31,11 +31,61 @@ export default function RemindersPage() {
     <>
       <PageHeader title="Reminders" description="Everything that needs someone today: calls, follow-ups, stale mandates, invoices and payments." />
       <Page>
+        <section className="mb-8">
+          <h2 className="mb-1 text-[15px] font-semibold">Past candidates who fit new mandates</h2>
+          <p className="mb-3 text-muted">
+            When a mandate opens or reopens, people we spoke to before are matched on the firm they asked for, practice
+            area, city and PQE as of today. The alert goes to whoever spoke to them.
+          </p>
+          <Suspense fallback={<TableSkeleton rows={3} />}>
+            <ReengagementList />
+          </Suspense>
+        </section>
+        <h2 className="mb-3 text-[15px] font-semibold">Needs attention</h2>
         <Suspense fallback={<TableSkeleton />}>
           <ReminderList />
         </Suspense>
       </Page>
     </>
+  );
+}
+
+type Alert = { id: string; title: string; body: string | null; recipient_id: string; created_at: string; read_at: string | null };
+
+async function ReengagementList() {
+  const supabase = await createClient();
+  const [{ data, error }, team] = await Promise.all([
+    supabase
+      .from("notifications")
+      .select("id, title, body, recipient_id, created_at, read_at")
+      .eq("kind", "reengagement")
+      .order("created_at", { ascending: false })
+      .limit(25),
+    getTeamNames(),
+  ]);
+  if (error) return <Empty title="Couldn't load alerts">{error.message}</Empty>;
+  const rows = (data ?? []) as Alert[];
+  if (rows.length === 0) return <Empty title="No matches yet">Matches appear here when a mandate opens.</Empty>;
+
+  return (
+    <Table head={["Match", "Why", "For", "When"]}>
+      {rows.map((n) => (
+        <tr key={n.id}>
+          <td className="font-medium">{n.title}</td>
+          <td>
+            <div className="flex flex-wrap gap-1.5">
+              {(n.body ?? "").split(" · ").filter(Boolean).map((reason) => (
+                <Badge key={reason} tone={reason.startsWith("Asked for") ? "accent" : "neutral"}>
+                  {reason}
+                </Badge>
+              ))}
+            </div>
+          </td>
+          <td>{team[n.recipient_id] ?? "—"}</td>
+          <td className="whitespace-nowrap text-muted">{ago(n.created_at)}</td>
+        </tr>
+      ))}
+    </Table>
   );
 }
 

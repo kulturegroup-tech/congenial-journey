@@ -55,6 +55,16 @@ where email = '<their email>';
 
 To create a brand-new user with a PIN, use Supabase → Authentication → Users → Add user → "Create new user" (tick "Auto confirm"). Replace PINs with Google sign-in before real data goes in.
 
+## Demo data
+
+Fictional demo data (28 made-up candidates, 9 mandates, placements, reminders, re-engagement alerts) lives in `supabase/demo/`. Every demo row's id starts with `de000000-`.
+
+- Load: run `supabase/demo/demo_data.sql` in the SQL editor (does nothing if already loaded)
+- Remove: run `supabase/demo/remove_demo_data.sql`. **Do this before importing real data.** Real rows are never touched
+- Check both: `node supabase/tests/demo.test.mjs`
+
+Demo data is currently **loaded** in the live project.
+
 ## Database changes
 
 Add a new file in `supabase/migrations/` (never edit an applied one), run `npm run test:db`, then apply it to the Supabase project.
