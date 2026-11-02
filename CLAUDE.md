@@ -86,19 +86,27 @@ Never edit a migration that has been applied. Add a new one, then run `node supa
 Build in this order. Each step should be usable on its own.
 
 - [x] Auth: Google sign-in or an email link through Supabase; only allowed domains or emails get in. A user without a `team_members` row sees nothing (RLS). First admin: see README
-- [x] App shell: left nav (Lookup, Mandates, Candidates, Clients, Reminders, Settings), Cmd/Ctrl+K opens Lookup
+- [x] App shell: left nav (Lookup, Mandates, Candidates, Clients, Billing, Reminders, Settings), Cmd/Ctrl+K opens Lookup
 - [x] Lookup: paste anything, see the match at once with phones and last call (who, when)
 - [x] Mandates board (read-only) and Reminders list
-- [ ] Notification bell for re-engagement alerts; "Create candidate" from an empty lookup; current pipelines in lookup results
-- [ ] Candidates: list (search, filter by practice area, city, PQE range, seniority, firm) and profile (contacts, CVs, calls, interest tags, prior applications, pipelines, activity)
-- [ ] Screening call form: the 14 fields, plus structured interest tags (field 5) and prior applications (field 12) captured in the same form. Must be fast to fill during a call
-- [ ] Clients and agreements: client, contacts (flag who is copied on shares), agreement terms and fee rates, signed PDF upload
-- [ ] Mandates: board from `v_mandate_board` (stale ones highlighted), mandate page with intake fields and a pipeline kanban; dragging into an exit asks for the reason
-- [ ] CV share dialog: pick CV version and channels, show `check_duplicate` findings, block or ask for an override reason, then open WhatsApp (`wa.me` link) or email with the note filled in. Copy the TA team when the agreement says so
-- [ ] Re-engagement: a "Past candidates who fit" panel on each mandate, plus notifications
+- [x] Notification bell for re-engagement alerts; "Create candidate" from an empty lookup; current pipelines in lookup results
+- [x] Candidates: list (search, filter by practice area, city, PQE range, seniority, firm) and profile (contacts, CVs, calls, interest tags, prior applications, pipelines, activity)
+- [x] Screening call form: the 14 fields, plus structured interest tags (field 5) and prior applications (field 12) captured in the same form. Must be fast to fill during a call
+- [x] Clients and agreements: client, contacts (flag who is copied on shares), agreement terms and fee rates, signed PDF upload
+- [x] Mandates: board from `v_mandate_board` (stale ones highlighted), mandate page with intake fields and a pipeline kanban; dragging into an exit asks for the reason
+- [x] CV share dialog: pick CV version and channels, show `check_duplicate` findings, block or ask for an override reason, then open WhatsApp (`wa.me` link) or email with the note filled in. Copy the TA team when the agreement says so
+- [x] Re-engagement: a "Past candidates who fit" panel on each mandate, plus notifications
 - [ ] Import (admin): load Odoo and sheet rows into `import_rows`, normalise, auto-merge on phone, email or LinkedIn, and send near-matches and unreadable PQE to a review list
 
-Phase 2 (don't build yet): placements, invoices and PDF, payments, reminders screen and emails, replacement windows, Google Calendar sync, dashboard. Phase 3: AI agents.
+Built ahead of phase 2: placements (from "Offer accepted" on a pipeline card, status updates on Billing), invoices via `create_invoice` with a printable tax invoice (browser print to PDF), payments, team management with PINs in Settings.
+
+Phase 2 (still to do): invoice PDF stored in the `invoices` bucket, reminder emails, Google Calendar sync, dashboard. Phase 3: AI agents.
+
+### Where things live in the app
+
+- `app/(app)/<section>/actions.ts`: Server Actions for that section. They call the database and `refresh()`; business rules stay in Postgres
+- `lib/forms.ts` (reading FormData, `dbError`), `components/form.tsx` (inputs, `Dialog`, `SubmitButton`), `lib/data/options.ts` (cached lists for selects)
+- Inserts into `cv_shares` and `placements` pass placeholder ids for `candidate_id`, `client_id`, `mandate_id` (and `valid_until`); the BEFORE triggers fill them from the pipeline entry
 
 ## Odoo and sheet import
 

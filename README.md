@@ -80,9 +80,14 @@ npm run test:db              # checks every business rule on an in-memory Postgr
 
 ## What's live
 
-- Sign-in with Google or an email link, limited to the team
-- **Lookup** (⌘K): paste a LinkedIn URL, phone (any format), email or name
-- **Mandates**: open mandates with owner, counts and stale flags
-- **Reminders**: calls, follow-ups, stale mandates, invoices, payments
+- **Lookup** (⌘K): paste a LinkedIn URL, phone (any format), email or name. Shows phones, last call and open mandates; Enter opens the first match; "Add as new candidate" when there's none
+- **Candidates**: list with filters (practice area, city, seniority, PQE range); profile with contacts, CVs (private storage), screening calls, what they want, where they've already applied, mandates and activity; add and edit
+- **Screening call form**: the 14 fields plus interest tags and prior applications in one screen; Ctrl/⌘+Enter saves
+- **Mandates**: board with stale flags and tabs (open, filled, lost); mandate page with intake, a drag-and-drop pipeline, exits with reasons, "Past candidates who fit", CVs shared and activity
+- **CV share dialog**: duplicate check, override reason when blocked, then email or WhatsApp with the note filled in; copies the TA team when the agreement says so
+- **Clients**: contacts, agreement terms and fee rates, signed PDF upload, live submissions
+- **Billing**: placements, invoices (GST split and numbering from the database), printable tax invoice, payments, outstanding and overdue
+- **Reminders** and the **bell**: re-engagement alerts, calls today, follow-ups, stale mandates, invoices and payments
+- **Settings**: team and PINs (admin), change my PIN, firm details printed on invoices, defaults, practice areas
 
-Next in phase 1: candidates, screening call form, clients and agreements, mandate pipeline, CV share with duplicate check, re-engagement panel, Odoo import. See `CLAUDE.md`.
+Still to build: Odoo and sheet import. See `CLAUDE.md`.
