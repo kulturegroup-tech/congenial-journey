@@ -45,3 +45,10 @@ export const getOpenMandates = cache(async () => {
     .order("received_on", { ascending: false });
   return (data ?? []).map((m) => ({ id: m.id, label: `${m.clients?.display_name ?? "?"} · ${m.title}${m.city ? ` (${m.city})` : ""}` }));
 });
+
+/** Firm grade labels the team has used (A1–A3, SA…), for type-ahead. */
+export const getGradeLabels = cache(async () => {
+  const supabase = await createClient();
+  const { data } = await supabase.from("firm_grades").select("grade");
+  return [...new Set((data ?? []).map((g) => g.grade))].sort();
+});
