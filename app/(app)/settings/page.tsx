@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { ButtonLink } from "@/components/form";
 import { Badge, Card, Page, PageHeader, Table, TableSkeleton } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/member";
@@ -10,7 +11,11 @@ export const metadata: Metadata = { title: "Settings" };
 export default function SettingsPage() {
   return (
     <>
-      <PageHeader title="Settings" description="Team, firm details for invoices, and defaults. Only admins can change the team and firm details." />
+      <PageHeader
+        title="Settings"
+        description="Team, firm details for invoices, and defaults. Only admins can change the team and firm details."
+        actions={<ButtonLink href="/settings/import">Import from Odoo / sheets</ButtonLink>}
+      />
       <Page>
         <Suspense fallback={<TableSkeleton />}>
           <SettingsBody />

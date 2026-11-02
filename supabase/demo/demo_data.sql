@@ -10,6 +10,8 @@ begin
     raise notice 'Demo data already loaded';
     return;
   end if;
+  -- Historic stages without share records, like an import.
+  perform set_config('app.bypass_guards', 'on', true);
 
   -- ---------- Demo recruiters (no passwords: they cannot sign in) ----------
   insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,

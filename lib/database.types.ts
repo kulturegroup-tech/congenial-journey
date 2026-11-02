@@ -1972,6 +1972,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      import_batch: { Args: { p_batch: string; p_rows: Json }; Returns: Json }
+      import_member: { Args: { raw: string }; Returns: string }
+      import_one: {
+        Args: { p: Json; p_batch: string; p_mandate?: string; p_n: number }
+        Returns: Json
+      }
+      import_stage: {
+        Args: { raw: string }
+        Returns: Record<string, unknown>
+      }
       is_admin: { Args: never; Returns: boolean }
       is_team_member: { Args: never; Returns: boolean }
       linkedin_slug: { Args: { url: string }; Returns: string }

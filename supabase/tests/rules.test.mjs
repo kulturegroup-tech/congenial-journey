@@ -231,8 +231,8 @@ const rp = await one(`select replacement_mandate_id from placements where id = $
 ok(rp.replacement_mandate_id, 'leaving inside the window opens a linked replacement mandate');
 const rm = await one(`select title, replaces_placement_id from mandates where id = $1`, [rp.replacement_mandate_id]);
 ok(rm.title.startsWith('Replacement:') && rm.replaces_placement_id === P, 'replacement mandate points back to the placement');
+await db.exec(`select set_config('app.bypass_guards', 'on', false)`);  // fixture shortcut: straight to offer
 const eF = await id(`insert into pipeline_entries (candidate_id, mandate_id, stage) values ($1, $2, 'offer')`, [B, rp.replacement_mandate_id]);
-await db.exec(`select set_config('app.bypass_guards', 'on', false)`);
 const P3 = await id(`insert into placements (pipeline_entry_id, joining_date, annual_fixed_salary, status) values ($1, today_ist(), 2000000, 'joined')`, [eF]);
 await db.exec(`select set_config('app.bypass_guards', 'off', false)`);
 ok(Number((await one(`select fee_amount from placements where id = $1`, [P3])).fee_amount) === 0, 'replacement placement carries no fee');
@@ -291,6 +291,51 @@ await fails(`select admin_upsert_member('x@example.com', 'X', '12ab', false)`, /
 await fails(`select admin_upsert_member('y@example.com', 'Y', null, false)`, /Set a PIN/, 'new member needs a PIN');
 await as(R2);
 await fails(`select admin_upsert_member('z@example.com', 'Z', '123456', false)`, /Only an admin/, 'only an admin manages the team');
+await as(R1);
+
+
+console.log('\nImport from Odoo and sheets');
+const stageOf = async (raw) => await one(`select stage::text, exit_reason from import_stage($1)`, [raw]);
+ok((await stageOf('Shared Profiles')).stage === 'cv_shared', "Odoo 'Shared Profiles' → cv_shared");
+ok((await stageOf('Offer Accepted')).stage === 'documents', "Odoo 'Offer Accepted' → documents");
+ok((await stageOf('Not Interested')).exit_reason === 'rejected_role', "'Not Interested' → exit rejected_role");
+ok((await stageOf('interested ')).stage === 'pitched', "sheet 'interested' → pitched");
+ok((await stageOf('CV shared with client')).stage === 'cv_shared', "sheet 'CV shared with client' → cv_shared");
+ok((await one(`select import_member('Recruiter Two') = $1 as same`, [R2])).same, 'recruiter by full name');
+ok((await one(`select import_member('two@example.in') = $1 as same`, [R2])).same, 'recruiter by email');
+ok((await one(`select import_member('recruiter') is not null as found`)).found, 'recruiter by first name');
+await fails(`insert into pipeline_entries (candidate_id, mandate_id, stage) values ('${F}', '${M}', 'interview')`, /Log the CV share first/, 'cannot insert straight at a stage past CV shared');
+
+const imp = async (rows, batch = 'odoo') => (await one(`select import_batch($1, $2::jsonb) as r`, [batch, JSON.stringify(rows)])).r;
+let r = await imp([{ n: 2, mandate_id: M, data: { name: 'Gita  Importee', linkedin: 'https://www.linkedin.com/in/gita-importee/', phone: '9000000011.0', stage: 'Shared Profiles', recruiter: 'Recruiter Two', firm: 'other firm & co', pqe: '3.6' } }]);
+ok(r[0].status === 'imported', 'new Odoo row is imported');
+const G = r[0].candidate_id;
+const g = await one(`select full_name, source::text, owner_id, current_firm_id, (select stage::text from pipeline_entries where candidate_id = c.id and mandate_id = $2) as stage,
+  (select count(*)::int from candidate_phones where candidate_id = c.id) as phones from candidates c where id = $1`, [G, M]);
+ok(g.full_name === 'Gita Importee' && g.source === 'odoo_import' && g.owner_id === R2 && g.current_firm_id === fOther, 'name tidied, source, owner and firm (matched ignoring case) set');
+ok(g.stage === 'cv_shared' && g.phones === 1, 'historic stage loaded without a share; phone normalised');
+r = await imp([{ n: 3, mandate_id: M, data: { name: 'Gita I.', linkedin: 'linkedin.com/in/GITA-importee', stage: 'Interviewed' } }]);
+ok(r[0].status === 'merged' && r[0].candidate_id === G, 'same LinkedIn merges into the existing record');
+ok((await one(`select stage::text from pipeline_entries where candidate_id = $1 and mandate_id = $2`, [G, M])).stage === 'interview', 'a later stage moves the entry forward');
+r = await imp([{ n: 4, data: { name: 'Asha T', phone: '+91 90000 00001' } }]);
+ok(r[0].status === 'merged' && r[0].candidate_id === A, 'same phone merges');
+r = await imp([{ n: 5, data: { name: 'Harish Plusfour', pqe: '4+' } }], 'sheet:test');
+ok(r[0].status === 'needs_review' && /PQE/.test(r[0].issue), 'unreadable PQE goes to review');
+ok((await one(`select source::text, needs_review from candidates where id = $1`, [r[0].candidate_id])).needs_review, 'candidate flagged for review');
+r = await imp([{ n: 6, data: { name: 'Bharat Sampel' } }], 'sheet:test');
+ok(r[0].status === 'needs_review' && /Possible duplicate of Bharat Sample/.test(r[0].issue), 'similar name goes to review as a possible duplicate');
+ok((await one(`select raw->>'_possible_duplicate' as d from import_rows where candidate_id = $1`, [r[0].candidate_id])).d === B, 'the possible duplicate is recorded for merging');
+r = await imp([{ n: 7, data: { name: '' } }]);
+ok(r[0].status === 'skipped', 'row without a name is skipped');
+r = await imp([{ n: 8, mandate_id: M2, data: { name: 'Ira Keen', stage: 'Not relevant but interested', comments: 'Wants a GC role' } }]);
+const ira = await one(`select pe.exit_reason, pe.exit_note, (select count(*)::int from interest_tags t join clients cl on cl.firm_id = t.firm_id join mandates m on m.client_id = cl.id where t.candidate_id = pe.candidate_id and m.id = $2) as tags
+  from pipeline_entries pe where pe.candidate_id = $1 and pe.mandate_id = $2`, [r[0].candidate_id, M2]);
+ok(ira.exit_reason === 'not_a_fit' && ira.exit_note === 'Wants a GC role' && ira.tags === 1, "'Not relevant but interested' exits and records an interest tag for the client");
+r = await imp([{ n: 9, mandate_id: '00000000-0000-0000-0000-00000000dead', data: { name: 'Jai Broken' } }, { n: 10, data: { name: 'Kavya Fine' } }]);
+ok(r[0].status === 'needs_review' && r[1].status === 'imported', 'a row that errors is recorded and the rest carry on');
+ok((await one(`select count(*)::int as n from candidates where full_name = 'Jai Broken'`)).n === 0, 'the failed row leaves nothing half-written');
+await as(R2);
+await fails(`select import_batch('odoo', '[]'::jsonb)`, /Only an admin/, 'only an admin can import');
 await as(R1);
 
 console.log('\nRow-level security');
