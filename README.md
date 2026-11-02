@@ -27,8 +27,11 @@ Building with Claude Code? Start with `CLAUDE.md`.
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase → Project Settings → API Keys → publishable key |
 | `ALLOWED_EMAIL_DOMAINS` | `paradigmshifters.in` |
 | `ALLOWED_EMAILS` | extra people allowed to sign in, comma-separated (e.g. the developer) |
+| `NEXT_PUBLIC_GOOGLE_SIGNIN` | `on` once Google is enabled in Supabase; until then the Google button is hidden |
 
 Netlify reads these at build time: after changing one, trigger a new deploy.
+
+**Email sign-in links:** Supabase's built-in mailer only delivers to members of the Supabase organisation and sends a few emails an hour. For the team to use email links, add custom SMTP in Supabase → Authentication → Emails → SMTP (e.g. Resend or ZeptoMail with a verified paradigmshifters.in sender). Google sign-in needs none of this.
 
 ## Add the team
 

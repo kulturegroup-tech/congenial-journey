@@ -9,6 +9,19 @@ const errors: Record<string, string> = {
   auth: "Sign-in didn't complete. Please try again.",
 };
 
+// Google sign-in shows only once it is switched on in Supabase (Authentication → Providers → Google)
+// and NEXT_PUBLIC_GOOGLE_SIGNIN=on is set in Netlify. Until then the button would lead to an error page.
+const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_SIGNIN === "on";
+
+// Supabase's error codes, in words the team can act on.
+function explain(error: { code?: string; message: string }) {
+  if (error.code === "email_address_not_authorized")
+    return "Email sign-in links can't reach this address yet. Use Google sign-in, or ask your admin to finish email setup.";
+  if (error.code === "over_email_send_rate_limit")
+    return "Too many sign-in emails in the last hour. Wait a bit, or use Google sign-in.";
+  return error.message;
+}
+
 export function LoginForm() {
   const params = useSearchParams();
   const next = params.get("next") ?? "/";
@@ -41,7 +54,7 @@ export function LoginForm() {
       options: { emailRedirectTo: callback() },
     });
     setBusy(null);
-    if (error) setMessage(error.message);
+    if (error) setMessage(explain(error));
     else setSentTo(email.trim());
   }
 
@@ -60,19 +73,23 @@ export function LoginForm() {
   return (
     <div className="rounded-xl border border-line bg-surface px-6 py-6">
       {message ? <p className="mb-4 rounded-lg bg-danger-soft px-3 py-2 text-[13px] text-danger">{message}</p> : null}
-      <button
-        type="button"
-        onClick={withGoogle}
-        disabled={busy !== null}
-        className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 font-medium text-white hover:opacity-95 disabled:opacity-60"
-      >
-        {busy === "google" ? "Opening Google…" : "Sign in with Google"}
-      </button>
-      <div className="my-5 flex items-center gap-3 text-[12px] text-faint">
-        <span className="h-px flex-1 bg-line" />
-        or
-        <span className="h-px flex-1 bg-line" />
-      </div>
+      {googleEnabled ? (
+        <>
+          <button
+            type="button"
+            onClick={withGoogle}
+            disabled={busy !== null}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 font-medium text-white hover:opacity-95 disabled:opacity-60"
+          >
+            {busy === "google" ? "Opening Google…" : "Sign in with Google"}
+          </button>
+          <div className="my-5 flex items-center gap-3 text-[12px] text-faint">
+            <span className="h-px flex-1 bg-line" />
+            or
+            <span className="h-px flex-1 bg-line" />
+          </div>
+        </>
+      ) : null}
       <form onSubmit={withEmail} className="space-y-3">
         <input
           type="email"
