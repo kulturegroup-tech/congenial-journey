@@ -23,9 +23,17 @@ const fails = async (sql, re, msg, params = []) => {
 await db.exec(`
   create role anon; create role authenticated; create role service_role;
   create schema auth;
-  create table auth.users (id uuid primary key);
+  create table auth.users (instance_id uuid, id uuid primary key, aud text, role text, email text, encrypted_password text,
+    email_confirmed_at timestamptz, raw_app_meta_data jsonb, raw_user_meta_data jsonb, created_at timestamptz, updated_at timestamptz,
+    confirmation_token text, email_change text, email_change_token_new text, recovery_token text);
+  create table auth.identities (id uuid primary key default gen_random_uuid(), provider_id text, user_id uuid references auth.users(id) on delete cascade,
+    identity_data jsonb, provider text, last_sign_in_at timestamptz, created_at timestamptz, updated_at timestamptz);
   create function auth.uid() returns uuid language sql stable as
     $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+  -- pgcrypto stand-ins (PGlite has no pgcrypto); Supabase has the real ones in the extensions schema
+  create schema extensions;
+  create function extensions.gen_salt(text) returns text language sql as $$ select 'salt' $$;
+  create function extensions.crypt(pw text, salt text) returns text language sql as $$ select 'hashed:' || pw $$;
   create schema storage;
   create table storage.buckets (id text primary key, name text, public boolean);
   create table storage.objects (id uuid default gen_random_uuid(), bucket_id text, name text);
@@ -76,7 +84,7 @@ ok((await one(`select working_days_between('2026-10-30', '2026-11-03') as d`)).d
 const R1 = '00000000-0000-0000-0000-000000000001', R2 = '00000000-0000-0000-0000-000000000002',
       R3 = '00000000-0000-0000-0000-000000000003', OUT = '00000000-0000-0000-0000-000000000099';
 await db.exec(`
-  insert into auth.users values ('${R1}'), ('${R2}'), ('${R3}'), ('${OUT}');
+  insert into auth.users (id) values ('${R1}'), ('${R2}'), ('${R3}'), ('${OUT}');
   insert into team_members (id, full_name, email, is_admin) values
     ('${R1}', 'Recruiter One', 'one@example.in', true),
     ('${R2}', 'Recruiter Two', 'two@example.in', false),
@@ -261,6 +269,29 @@ const bm = await one(`select linkedin_slug, (select count(*)::int from candidate
 ok(bm.linkedin_slug === 'bharat-sample' && bm.phones === 1, 'merge keeps one record with both records’ details');
 await as(R2);
 await fails(`select merge_candidates('${A}', '${D}')`, /Only an admin/, 'only an admin can merge');
+
+console.log('\nApp helpers');
+await as(R1);
+const fAzb = await one(`select resolve_firm('  AZB  &  Partners ') as id`);
+ok(fAzb.id, 'resolve_firm creates a new firm, tidying spaces');
+ok((await one(`select resolve_firm('azb & partners') = $1 as same`, [fAzb.id])).same, 'same firm found ignoring case');
+await q(`update firms set aliases = '{AZB}' where id = $1`, [fAzb.id]);
+ok((await one(`select resolve_firm('azb', false) = $1 as same`, [fAzb.id])).same, 'found by alias');
+ok((await one(`select resolve_firm('Nobody & Co', false) as id`)).id === null, 'no create when asked not to');
+ok((await one(`select resolve_firm('   ') as id`)).id === null, 'blank name gives no firm');
+
+const newId = (await one(`select admin_upsert_member('New.Person@Example.com', 'New Person', '123456', false) as id`)).id;
+const nu = await one(`select u.email, u.encrypted_password, t.full_name, t.is_admin, (select count(*)::int from auth.identities i where i.user_id = u.id) as ids
+                      from auth.users u join team_members t on t.id = u.id where u.id = $1`, [newId]);
+ok(nu.email === 'new.person@example.com' && nu.encrypted_password === 'hashed:123456' && nu.ids === 1, 'admin creates a login with a PIN and an identity');
+await q(`select admin_upsert_member('new.person@example.com', 'New Person', '654321', true)`);
+const nu2 = await one(`select u.encrypted_password, t.is_admin from auth.users u join team_members t on t.id = u.id where u.id = $1`, [newId]);
+ok(nu2.encrypted_password === 'hashed:654321' && nu2.is_admin, 'admin resets the PIN and makes them admin');
+await fails(`select admin_upsert_member('x@example.com', 'X', '12ab', false)`, /PIN must be/, 'PIN must be digits');
+await fails(`select admin_upsert_member('y@example.com', 'Y', null, false)`, /Set a PIN/, 'new member needs a PIN');
+await as(R2);
+await fails(`select admin_upsert_member('z@example.com', 'Z', '123456', false)`, /Only an admin/, 'only an admin manages the team');
+await as(R1);
 
 console.log('\nRow-level security');
 await db.exec(`set role authenticated`);

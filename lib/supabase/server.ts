@@ -3,12 +3,13 @@ import "server-only";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { supabaseKey, supabaseUrl } from "./env";
+import type { Database } from "@/lib/database.types";
 
 // Server Components, Route Handlers and Server Actions. Reads the session cookie, so any
 // Server Component that calls this must sit inside a <Suspense> boundary (Cache Components).
 export async function createClient() {
   const cookieStore = await cookies();
-  return createServerClient(supabaseUrl, supabaseKey, {
+  return createServerClient<Database>(supabaseUrl, supabaseKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll();
