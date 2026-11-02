@@ -9,7 +9,7 @@ export function SetupNotice() {
         <h2 className="mt-1 text-lg font-semibold">Connect the database</h2>
         <p className="mt-2 text-muted">
           The app is deployed but doesn&apos;t know which Supabase project to use yet. Add these environment variables in
-          Vercel (Settings → Environment Variables), then redeploy:
+          Netlify (Project configuration → Environment variables), then trigger a new deploy:
         </p>
         <ul className="mt-3 space-y-1 font-mono text-[13px]">
           <li>NEXT_PUBLIC_SUPABASE_URL</li>

@@ -1,40 +1,36 @@
 # Paradigm Shifters — recruitment workspace
 
-Internal app for Paradigm Shifters: one candidate database, mandate tracker, duplicate guard and billing, replacing Odoo and the sheets. Next.js 16 on Vercel, Supabase for the database and sign-in.
+Internal app for Paradigm Shifters: one candidate database, mandate tracker, duplicate guard and billing, replacing Odoo and the sheets. Next.js 16 on Netlify, Supabase for the database and sign-in.
 
 Building with Claude Code? Start with `CLAUDE.md`.
 
-## First-time setup
+| | |
+| --- | --- |
+| Live site | https://paradigm-shifters.netlify.app |
+| Netlify site | `paradigm-shifters` (team Kulture) |
+| Supabase project | `paradigm-shifters`, ref `fqsqfxshjedljagxytat`, region Mumbai (`ap-south-1`) |
 
-### 1. Supabase
+## Setup status
 
-1. Create a project at supabase.com (region: Mumbai, `ap-south-1`).
-2. Run the schema. Either:
-   - with the Supabase CLI: `npx supabase link --project-ref <ref>` then `npx supabase db push`, then run `supabase/seed.sql` in the SQL editor; or
-   - in the SQL editor, paste and run, in order: `supabase/migrations/20261102000001_init.sql`, `supabase/migrations/20261102000002_storage.sql`, `supabase/seed.sql`.
-3. **Authentication → URL Configuration**: set Site URL to the Vercel address, and add these Redirect URLs:
-   - `https://<your-vercel-domain>/auth/callback`
-   - `http://localhost:3000/auth/callback`
-4. **Authentication → Providers → Google**: turn it on with a Google Cloud OAuth client (type "Web application"). In Google Cloud, the authorised redirect URI is `https://<project-ref>.supabase.co/auth/v1/callback`.
-   Email sign-in links work without this, so you can test before Google is set up.
+- [x] Supabase project created; migrations 1–3 and `seed.sql` applied; security advisor checked
+- [x] Netlify site created with `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `ALLOWED_EMAIL_DOMAINS`
+- [ ] Netlify: link the GitHub repo (Project configuration → Build & deploy → Link repository), branch `main`
+- [ ] Supabase → Authentication → URL Configuration: Site URL `https://paradigm-shifters.netlify.app`; Redirect URLs `https://paradigm-shifters.netlify.app/auth/callback` and `http://localhost:3000/auth/callback`
+- [ ] Supabase → Authentication → Providers → Google (optional; email sign-in links work without it). Needs a Google Cloud OAuth client of type "Web application" with redirect URI `https://fqsqfxshjedljagxytat.supabase.co/auth/v1/callback`
+- [ ] First admin added (below)
 
-### 2. Vercel
+## Environment variables
 
-1. vercel.com/new → Import `kulturegroup-tech/paradigm-shifters`. Framework: Next.js (detected).
-2. Environment variables (from Supabase → Project Settings → API):
+| Name | Value |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://fqsqfxshjedljagxytat.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase → Project Settings → API Keys → publishable key |
+| `ALLOWED_EMAIL_DOMAINS` | `paradigmshifters.in` |
+| `ALLOWED_EMAILS` | extra people allowed to sign in, comma-separated (e.g. the developer) |
 
-   | Name | Value |
-   | --- | --- |
-   | `NEXT_PUBLIC_SUPABASE_URL` | `https://<project-ref>.supabase.co` |
-   | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | the publishable (or anon) key |
-   | `ALLOWED_EMAIL_DOMAINS` | `paradigmshifters.in` |
-   | `ALLOWED_EMAILS` | extra people allowed to sign in, comma-separated (e.g. the developer) |
+Netlify reads these at build time: after changing one, trigger a new deploy.
 
-3. Deploy. Every push to `main` deploys again.
-
-Without the Supabase variables the site still deploys and shows a "Connect the database" screen.
-
-### 3. Add the team
+## Add the team
 
 Each person signs in once (this creates their login), then an admin adds them. The first admin goes in through the Supabase SQL editor:
 
@@ -45,10 +41,14 @@ select id, 'Khyati Shrestha', email, true from auth.users where email = 'khyati@
 
 Until someone has a `team_members` row, they see an "Almost there" screen and no data.
 
+## Database changes
+
+Add a new file in `supabase/migrations/` (never edit an applied one), run `npm run test:db`, then apply it to the Supabase project.
+
 ## Local development
 
 ```bash
-cp .env.example .env.local   # fill in the Supabase values
+cp .env.example .env.local   # fill in the values above
 npm install
 npm run dev                  # http://localhost:3000
 npm run test:db              # checks every business rule on an in-memory Postgres

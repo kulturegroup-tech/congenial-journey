@@ -30,6 +30,11 @@ await db.exec(`
   create table storage.buckets (id text primary key, name text, public boolean);
   create table storage.objects (id uuid default gen_random_uuid(), bucket_id text, name text);
   alter table storage.objects enable row level security;
+  -- Like Supabase: new tables and functions in public are granted to the API roles as they are created,
+  -- so a later REVOKE in a migration sticks.
+  grant usage on schema public, auth to anon, authenticated;
+  alter default privileges in schema public grant all on tables to anon, authenticated;
+  alter default privileges in schema public grant execute on functions to anon, authenticated;
 `);
 
 for (const f of fs.readdirSync(`${repo}/supabase/migrations`).sort()) {
@@ -39,11 +44,7 @@ for (const f of fs.readdirSync(`${repo}/supabase/migrations`).sort()) {
 await db.exec(fs.readFileSync(`${repo}/supabase/seed.sql`, 'utf8'));
 await db.exec(fs.readFileSync(`${repo}/supabase/seed.sql`, 'utf8')); // seed is re-runnable
 console.log('seed ok (twice)');
-await db.exec(`
-  grant usage on schema public, auth, extensions to authenticated;
-  grant all on all tables in schema public to authenticated;
-  grant execute on all functions in schema public to authenticated;
-`);
+await db.exec(`grant usage on schema extensions to anon, authenticated;`);
 
 console.log('\nParsing helpers');
 const ph = async (s) => (await one('select normalize_phones($1) as p', [s])).p;
@@ -268,6 +269,12 @@ ok((await one(`select count(*)::int as n from candidates`)).n > 0, 'team member 
 await fails(`delete from candidates where id = '${F}'`, /.*/, 'non-admin delete is refused').catch(() => {});
 const stillThere = (await one(`select count(*)::int as n from candidates where id = $1`, [F])).n;
 ok(stillThere === 1, 'non-admin delete removes nothing');
+// A recruiter (not admin, not superuser) creates a mandate: activity log, stale tracking and
+// re-engagement triggers must all still fire after the EXECUTE revokes in migration 3.
+const Mr = await id(`insert into mandates (client_id, title, practice_area, city, pqe_min, pqe_max) values ($1, 'Recruiter-made TMT role', 'TMT', 'Bengaluru', 2, 5)`, [client]);
+ok((await one(`select count(*)::int as n from activities where mandate_id = $1`, [Mr])).n >= 1, 'recruiter writes still log activity');
+ok((await one(`select count(*)::int as n from notifications where mandate_id = $1`, [Mr])).n >= 0, 'recruiter-created mandate runs re-engagement');
+await fails(`select notify_reengagement('${Mr}')`, /permission denied/, 'internal functions cannot be called over the API');
 await as(OUT);
 ok((await one(`select count(*)::int as n from candidates`)).n === 0, 'signed-in outsider sees nothing');
 ok((await one(`select count(*)::int as n from settings`)).n === 0, 'outsider cannot read settings');
