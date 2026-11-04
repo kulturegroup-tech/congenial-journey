@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { Page, TableSkeleton } from "@/components/ui";
+import { Avatar, Page, TableSkeleton } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getFirmNames, getOpenMandates, getPracticeAreas } from "@/lib/data/options";
 import { formatPqe } from "@/lib/format";
@@ -15,7 +15,7 @@ type SP = Promise<Record<string, string | string[] | undefined>>;
 
 export default function CallPage({ params, searchParams }: { params: Params; searchParams: SP }) {
   return (
-    <Suspense fallback={<div className="p-8"><TableSkeleton /></div>}>
+    <Suspense fallback={<div className="px-10 pt-24"><TableSkeleton /></div>}>
       <CallScreen params={params} searchParams={searchParams} />
     </Suspense>
   );
@@ -36,16 +36,17 @@ async function CallScreen({ params, searchParams }: { params: Params; searchPara
 
   return (
     <>
-      <header className="sticky top-0 z-10 border-b border-line bg-surface/95 px-8 py-4 backdrop-blur">
-        <Link href={`/candidates/${id}`} className="text-[13px] text-muted hover:text-ink">
-          ← {c.full_name}
+      <header className="sticky top-0 z-20 border-b border-line bg-surface/85 px-10 py-4 backdrop-blur-xl backdrop-saturate-150">
+        <Link href={`/candidates/${id}`} className="state -ml-2 inline-flex rounded-full px-2 py-0.5 text-[13px] text-muted hover:text-ink">
+          Back to {c.full_name}
         </Link>
-        <h1 className="mt-1 text-[20px] font-semibold tracking-tight">
-          Screening call · {c.full_name}
-          <span className="ml-2 text-[14px] font-normal text-muted">
-            {[c.designation, c.current_firm, c.pqe_today != null ? `${formatPqe(c.pqe_today)} PQE` : null].filter(Boolean).join(" · ")}
+        <div className="mt-1 flex items-center gap-3">
+          <Avatar name={c.full_name ?? "?"} size={36} />
+          <h1 className="font-display text-[30px] leading-none">Call with {c.full_name}</h1>
+          <span className="text-[14px] text-muted">
+            {[c.designation, c.current_firm, c.pqe_today != null ? formatPqe(c.pqe_today) : null].filter(Boolean).join(" · ")}
           </span>
-        </h1>
+        </div>
       </header>
       <Page>
         <CallForm

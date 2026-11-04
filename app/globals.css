@@ -1,33 +1,212 @@
 @import "tailwindcss";
 
-/* Design tokens: the one place to change for a visual design pass. */
+/* Design tokens: the one place to change for a visual design pass.
+   Forest & sage: one deep green carries the brand; soft tonal blocks (mist, clay, sand, sage)
+   group the work; everything else stays white and quiet. */
 @theme {
-  --color-canvas: #f7f7f5;
   --color-surface: #ffffff;
-  --color-ink: #1c1c1e;
-  --color-muted: #6b6b70;
-  --color-faint: #a1a1a6;
-  --color-line: #e6e5e1;
-  --color-accent: #1f3a5f;
-  --color-accent-soft: #e9eef5;
-  --color-warn: #a15c07;
-  --color-warn-soft: #fdf3dc;
-  --color-danger: #b42318;
-  --color-danger-soft: #fdecea;
-  --color-ok: #067647;
-  --color-ok-soft: #e3f8ec;
+  --color-canvas: #f4f6f3; /* filled inputs, hover fills */
+  --color-side: #eef1ec; /* sidebar and quiet panels */
+  --color-ink: #1d2a24;
+  --color-muted: #66736c;
+  --color-faint: #a3ada7;
+  --color-line: #e2e7e1;
+
+  --color-accent: #24453a; /* forest: primary actions, active nav */
+  --color-accent-soft: #e2ebdd; /* sage container: suggestions, selected */
+  --color-hero: #1f3b31;
+  --color-sage: #c9d6a0; /* highlight on forest, progress */
+
+  --color-mist: #e3eaef; /* calls */
+  --color-clay: #f3e6de; /* follow-ups */
+  --color-sand: #f2ecdd; /* money, going quiet */
+  --color-lilac: #e9e5f1; /* interviews */
+  --color-lilac-ink: #6a5a8e;
+
+  --color-warn: #9a5b13;
+  --color-warn-soft: #f6ead6;
+  --color-danger: #a63a2b;
+  --color-danger-soft: #f6e1dc;
+  --color-ok: #2f6b4f;
+  --color-ok-soft: #e1ede3;
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--font-instrument), Georgia, serif;
+
+  --ease-spring: linear(0, 0.009, 0.035 2.1%, 0.141 4.4%, 0.723 12.9%, 0.938 16.7%, 1.017 19.4%, 1.067, 1.096 24%, 1.106 25.8%, 1.098 28.6%, 1.024 36.1%, 0.998 40.6%, 0.988 45.2%, 1.003 63.3%, 1);
+  --ease-quick: cubic-bezier(0.2, 0, 0, 1);
 }
 
 body {
-  background: var(--color-canvas);
+  background: var(--color-surface);
   color: var(--color-ink);
 }
 
 ::selection {
   background: var(--color-accent-soft);
+}
+
+:focus-visible:not(input, textarea, select) {
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+  outline-offset: 2px;
+}
+
+@layer components {
+/* State layer: anything clickable tints the same small amount on hover and a bit more on press. */
+.state {
+  position: relative;
+  isolation: isolate;
+}
+.state::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: currentColor;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s var(--ease-quick);
+}
+.state:hover::after {
+  opacity: 0.06;
+}
+.state:active::after {
+  opacity: 0.1;
+}
+/* On light rows the layer should be ink, whatever the text colour. */
+.state-ink::after {
+  background: var(--color-ink);
+}
+.state-ink:hover::after {
+  opacity: 0.045;
+}
+
+}
+
+/* Press ripple (added by components/motion.tsx). */
+.ripple {
+  position: absolute;
+  border-radius: 9999px;
+  background: currentColor;
+  opacity: 0.2;
+  transform: scale(0);
+  pointer-events: none;
+  animation: ripple 0.55s var(--ease-quick) forwards;
+}
+@keyframes ripple {
+  to {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+@layer components {
+/* Row actions appear where you are: the label fades, the actions take its place. */
+.swap {
+  display: grid;
+  justify-items: end;
+  align-items: center;
+}
+.swap > * {
+  grid-area: 1 / 1;
+}
+.swap > .swap-out {
+  transition: opacity 0.15s var(--ease-quick);
+}
+.swap > .swap-in {
+  opacity: 0;
+  transition: opacity 0.15s var(--ease-quick);
+}
+.group:hover .swap > .swap-out,
+.group:focus-within .swap > .swap-out {
+  opacity: 0;
+}
+.group:hover .swap > .swap-in,
+.group:focus-within .swap > .swap-in {
+  opacity: 1;
+}
+
+}
+
+/* Sheets: dialogs slide up from the bottom with a spring. */
+dialog.sheet {
+  transform: translateY(0);
+  transition:
+    transform 0.55s var(--ease-spring),
+    opacity 0.2s var(--ease-quick),
+    display 0.55s allow-discrete,
+    overlay 0.55s allow-discrete;
+}
+@starting-style {
+  dialog.sheet[open] {
+    transform: translateY(100%);
+  }
+}
+dialog.sheet:not([open]) {
+  transform: translateY(100%);
+}
+dialog.sheet::backdrop {
+  background: rgb(29 42 36 / 0.28);
+  transition:
+    background 0.25s,
+    display 0.25s allow-discrete,
+    overlay 0.25s allow-discrete;
+}
+@starting-style {
+  dialog.sheet[open]::backdrop {
+    background: rgb(29 42 36 / 0);
+  }
+}
+
+/* Popovers (context menu, command palette) spring in from where they open. */
+.pop {
+  animation: pop 0.4s var(--ease-spring) both;
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+.rise {
+  animation: rise 0.55s var(--ease-spring) both;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+/* Confetti for joinings (components/confetti.ts). */
+.confetti {
+  position: fixed;
+  top: -12px;
+  z-index: 100;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  pointer-events: none;
+  animation: confetti-fall var(--dur, 1.8s) var(--ease-quick) forwards;
+}
+@keyframes confetti-fall {
+  to {
+    transform: translate(var(--dx, 0), 105vh) rotate(var(--rot, 540deg));
+    opacity: 0.9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  .confetti {
+    display: none;
+  }
 }
 
 /* Printing an invoice: only the sheet. */

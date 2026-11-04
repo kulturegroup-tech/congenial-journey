@@ -17,7 +17,7 @@ export function SignOutButton({ variant = "link" }: { variant?: "link" | "button
 
   const style =
     variant === "button"
-      ? "rounded-lg border border-line bg-surface px-3.5 py-2 font-medium hover:bg-canvas"
+      ? "state rounded-full px-4 py-2 font-medium ring-1 ring-inset ring-line"
       : "text-[13px] text-muted hover:text-ink";
 
   return (

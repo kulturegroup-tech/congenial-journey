@@ -92,6 +92,7 @@ export type FirmSettings = {
   invoice_prefix: string;
   next_invoice_serial: number;
   invoice_fy: string | null;
+  monthly_joining_target?: number;
   gst_rate: number;
   sac_code: string;
   stale_after_working_days: number;
@@ -135,12 +136,15 @@ export function FirmForm({ s, canEdit }: { s: FirmSettings; canEdit: boolean }) 
             <Input name="sac_code" defaultValue={s.sac_code} />
           </Field>
         </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          <Field label="Mandate goes stale after (working days)">
+        <div className="grid gap-4 md:grid-cols-4">
+          <Field label="Mandate goes quiet after (working days)">
             <Input name="stale_after_working_days" type="number" min={1} defaultValue={s.stale_after_working_days} />
           </Field>
           <Field label="Default cooling-off (months)" hint="When a client has no agreement yet.">
             <Input name="default_cooling_off_months" type="number" min={0} defaultValue={s.default_cooling_off_months} />
+          </Field>
+          <Field label="Joinings target each month" hint="Shown on Today for the whole team.">
+            <Input name="monthly_joining_target" type="number" min={0} defaultValue={s.monthly_joining_target ?? 5} />
           </Field>
           <Field label="Default resume validity (months)">
             <Input name="default_resume_validity_months" type="number" min={0} defaultValue={s.default_resume_validity_months} />

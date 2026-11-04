@@ -5,7 +5,7 @@ export function SetupNotice() {
   return (
     <div className="flex min-h-[70vh] items-center justify-center p-8">
       <Card className="max-w-lg px-7 py-6">
-        <p className="text-[12px] font-medium uppercase tracking-wide text-warn">Setup needed</p>
+        <p className="text-[13px] font-medium text-warn">Setup needed</p>
         <h2 className="mt-1 text-lg font-semibold">Connect the database</h2>
         <p className="mt-2 text-muted">
           The app is deployed but doesn&apos;t know which Supabase project to use yet. Add these environment variables in

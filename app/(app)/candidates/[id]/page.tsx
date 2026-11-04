@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ButtonLink } from "@/components/form";
-import { Badge, Card, Empty, Page, TableSkeleton } from "@/components/ui";
+import { Avatar, Badge, Card, Empty, Page, PageHeader, TableSkeleton } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getSession, getTeamNames } from "@/lib/auth/member";
 import { getFirmNames, getOpenMandates, getPracticeAreas, getTeam } from "@/lib/data/options";
@@ -17,7 +17,7 @@ type Params = Promise<{ id: string }>;
 
 export default function CandidatePage({ params }: { params: Params }) {
   return (
-    <Suspense fallback={<div className="p-8"><TableSkeleton /></div>}>
+    <Suspense fallback={<div className="px-10 pt-24"><TableSkeleton /></div>}>
       <Profile params={params} />
     </Suspense>
   );
@@ -65,48 +65,49 @@ async function Profile({ params }: { params: Params }) {
 
   return (
     <>
-      <header className="border-b border-line bg-surface px-8 pb-5 pt-6">
-        <Link href="/candidates" className="text-[13px] text-muted hover:text-ink">
-          ← Candidates
-        </Link>
-        <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-[22px] font-semibold tracking-tight">
-              {c.full_name} {c.review_note === "Demo data" ? <Badge>Demo</Badge> : null}
-            </h1>
-            <p className="mt-1 text-muted">
-              {[c.designation, c.current_firm].filter(Boolean).join(" · ") || "No current firm recorded"}
-              {c.current_city ? ` · ${c.current_city}` : ""}
-            </p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {c.pqe_today != null ? <Badge tone="accent">{formatPqe(c.pqe_today)} PQE</Badge> : null}
-              {c.seniority ? <Badge>{c.seniority}</Badge> : null}
-              {(c.practice_areas ?? []).map((p) => (
-                <Badge key={p}>{p}</Badge>
-              ))}
-              {c.linkedin_url ? (
-                <a href={c.linkedin_url} target="_blank" rel="noreferrer" className="text-[13px] text-accent hover:underline">
-                  LinkedIn ↗
-                </a>
-              ) : null}
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
+      <PageHeader
+        title={c.full_name ?? ""}
+        back={{ href: "/candidates", label: "Candidates" }}
+        leading={<Avatar name={c.full_name ?? "?"} size={64} />}
+        description={
+          <>
+            {[c.designation, c.current_firm].filter(Boolean).join(" at ") || "No current firm recorded"}
+            {c.current_city ? `, ${c.current_city}` : ""}
+          </>
+        }
+        actions={
+          <>
             <ButtonLink href={`/candidates/${id}/call`} variant="primary">
               Log a call
             </ButtonLink>
             <ScheduleCall candidateId={id} mandates={mandates} team={teamList.filter((t) => t.active).map((t) => ({ id: t.id, label: t.full_name }))} me={me} />
             <AddToMandate candidateId={id} mandates={mandates} />
-            <ButtonLink href={`/candidates/${id}/edit`}>Edit</ButtonLink>
-          </div>
+            <ButtonLink href={`/candidates/${id}/edit`} variant="ghost">
+              Edit
+            </ButtonLink>
+          </>
+        }
+      >
+        <div className="mt-5 flex flex-wrap items-center gap-1.5">
+          {c.pqe_today != null ? <Badge tone="accent">{formatPqe(c.pqe_today)} experience</Badge> : null}
+          {c.seniority ? <Badge>{c.seniority}</Badge> : null}
+          {(c.practice_areas ?? []).map((p) => (
+            <Badge key={p}>{p}</Badge>
+          ))}
+          {c.review_note === "Demo data" ? <Badge tone="warn">Demo</Badge> : null}
+          {c.linkedin_url ? (
+            <a href={c.linkedin_url} target="_blank" rel="noreferrer" className="ml-1 text-[13px] font-medium text-accent underline decoration-accent/30 underline-offset-2 hover:decoration-accent">
+              LinkedIn profile
+            </a>
+          ) : null}
         </div>
-      </header>
+      </PageHeader>
 
       <Page>
         <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
           <div className="min-w-0 space-y-6">
             {scheduled.length ? (
-              <Card className="border-warn/40 bg-warn-soft px-5 py-3">
+              <Card className="bg-mist px-5 py-3 ring-0">
                 {scheduled.map((s) => (
                   <div key={s.id} className="flex flex-wrap items-center justify-between gap-2 py-1">
                     <span>
@@ -124,7 +125,7 @@ async function Profile({ params }: { params: Params }) {
             ) : null}
 
             <section>
-              <h2 className="mb-2 font-semibold">Mandates</h2>
+              <h2 className="mb-2.5 text-[16.5px] font-semibold">Mandates</h2>
               {pipes.data?.length ? (
                 <Card className="divide-y divide-line">
                   {pipes.data.map((p) => (
@@ -157,7 +158,7 @@ async function Profile({ params }: { params: Params }) {
             </section>
 
             <section>
-              <h2 className="mb-2 font-semibold">Screening calls</h2>
+              <h2 className="mb-2.5 text-[16.5px] font-semibold">Screening calls</h2>
               {done.length ? (
                 <Card className="divide-y divide-line">
                   {done.map((s) => (
@@ -195,23 +196,23 @@ async function Profile({ params }: { params: Params }) {
             </section>
 
             <section>
-              <h2 className="mb-2 font-semibold">Activity</h2>
+              <h2 className="mb-2.5 text-[16.5px] font-semibold">Activity</h2>
               {acts.data?.length ? (
                 <Card className="divide-y divide-line text-[13px]">
                   {acts.data.map((a) => {
                     const d = (a.details ?? {}) as Record<string, string>;
                     const what =
                       a.action === "stage_changed"
-                        ? `moved to ${stageLabel(d.to)}`
+                        ? `Moved to ${stageLabel(d.to)}`
                         : a.action === "exited"
-                          ? `left: ${d.reason?.replace(/_/g, " ")}`
+                          ? `Dropped: ${d.reason?.replace(/_/g, " ")}`
                           : a.action === "created" && a.entity_type === "cv_shares"
                             ? "CV shared"
                             : a.action === "created" && a.entity_type === "pipeline_entries"
-                              ? "added to mandate"
+                              ? "Added to a mandate"
                               : a.action === "created" && a.entity_type === "screening_calls"
-                                ? "call logged"
-                                : a.action.replace(/_/g, " ");
+                                ? "Call logged"
+                                : a.action.replace(/_/g, " ").replace(/^./, (x) => x.toUpperCase());
                     return (
                       <div key={a.id} className="flex justify-between gap-3 px-4 py-2">
                         <span>
@@ -233,16 +234,16 @@ async function Profile({ params }: { params: Params }) {
           </div>
 
           <aside className="space-y-4">
-            <Card className="p-4">
+            <Card className="p-5 ring-0 bg-side">
               <div className="mb-2 flex items-center justify-between">
-                <h3 className="font-semibold">Contact</h3>
+                <h3 className="text-[15.5px] font-semibold">Contact</h3>
                 <AddContact candidateId={id} />
               </div>
               {phones.data?.length || emails.data?.length ? (
                 <ul className="space-y-1.5">
                   {phones.data?.map((p) => (
                     <li key={p.id} className="flex items-center justify-between gap-2">
-                      <a href={`tel:${p.phone}`} className="font-mono text-[13px] hover:text-accent">
+                      <a href={`tel:${p.phone}`} className="text-[13.5px] tabular-nums hover:text-accent">
                         {formatPhone(p.phone)}
                       </a>
                       <span className="flex items-center gap-2">
@@ -265,8 +266,8 @@ async function Profile({ params }: { params: Params }) {
               )}
             </Card>
 
-            <Card className="p-4">
-              <h3 className="mb-2 font-semibold">Details</h3>
+            <Card className="p-5">
+              <h3 className="mb-2.5 text-[15.5px] font-semibold">Details</h3>
               <dl className="grid grid-cols-[110px_1fr] gap-y-1.5 text-[13px]">
                 <dt className="text-muted">Current CTC</dt>
                 <dd>{c.current_ctc != null ? formatLakhs(c.current_ctc) : "—"}</dd>
@@ -287,12 +288,12 @@ async function Profile({ params }: { params: Params }) {
               </dl>
             </Card>
 
-            <Card className="p-4">
+            <Card className="p-5 ring-0 bg-accent-soft">
               <div className="mb-1 flex items-center justify-between">
-                <h3 className="font-semibold">What they want</h3>
+                <h3 className="text-[15.5px] font-semibold">What they want</h3>
                 <AddInterest candidateId={id} firms={firms} practices={practices} />
               </div>
-              <p className="mb-2 text-[12px] text-muted">Drives re-engagement alerts.</p>
+              <p className="mb-2 text-[12px] text-muted">When a matching mandate opens, they show up as suggested.</p>
               {tags.data?.length ? (
                 <ul className="space-y-2 text-[13px]">
                   {tags.data.map((t) => (
@@ -310,9 +311,9 @@ async function Profile({ params }: { params: Params }) {
               )}
             </Card>
 
-            <Card className="p-4">
+            <Card className="p-5 ring-0 bg-sand">
               <div className="mb-1 flex items-center justify-between">
-                <h3 className="font-semibold">Already applied to</h3>
+                <h3 className="text-[15.5px] font-semibold">Already applied to</h3>
                 <AddPrior candidateId={id} firms={firms} />
               </div>
               <p className="mb-2 text-[12px] text-muted">Used by the duplicate check.</p>
@@ -333,9 +334,9 @@ async function Profile({ params }: { params: Params }) {
               )}
             </Card>
 
-            <Card className="p-4">
+            <Card className="p-5 ring-0 bg-side">
               <div className="mb-2 flex items-center justify-between">
-                <h3 className="font-semibold">CVs</h3>
+                <h3 className="text-[15.5px] font-semibold">CVs</h3>
                 <CvUpload candidateId={id} />
               </div>
               {files.data?.length ? (

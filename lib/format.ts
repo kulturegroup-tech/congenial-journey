@@ -95,3 +95,70 @@ export function rupeesInWords(amount: number) {
   const words = parts.join(" ") || "Zero";
   return `Rupees ${words}${paise ? ` and ${twoDigits(paise)} Paise` : ""} Only`;
 }
+
+// ---------- Calendar helpers (all India time) ----------
+
+/** Today as YYYY-MM-DD in India. */
+export function todayIst(now = new Date()) {
+  return istDay(now);
+}
+
+/** Add days to a YYYY-MM-DD date. */
+export function addDays(day: string, n: number) {
+  const d = new Date(`${day}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+/** The instant an India-time day starts, as an ISO string (for timestamp filters). */
+export function istStart(day: string) {
+  return new Date(`${day}T00:00:00+05:30`).toISOString();
+}
+
+/** Monday of the week containing the day. */
+export function weekStart(day: string) {
+  const dow = new Date(`${day}T00:00:00Z`).getUTCDay(); // 0 = Sunday
+  return addDays(day, dow === 0 ? -6 : 1 - dow);
+}
+
+export function monthStart(day: string) {
+  return `${day.slice(0, 7)}-01`;
+}
+
+export function monthEnd(day: string) {
+  const d = new Date(`${monthStart(day)}T00:00:00Z`);
+  d.setUTCMonth(d.getUTCMonth() + 1);
+  d.setUTCDate(0);
+  return d.toISOString().slice(0, 10);
+}
+
+/** The India-time calendar day of an instant. */
+export function istDayOf(value: string | Date) {
+  return istDay(toDate(value));
+}
+
+/** "3:00 pm" in India time. */
+export function formatTime(value: string | Date) {
+  return new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: IST }).format(toDate(value)).replace(" ", " ").toLowerCase();
+}
+
+/** "Wednesday, 4 November". */
+export function formatLongDay(day: string) {
+  return new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${day}T00:00:00Z`));
+}
+
+/** "Good morning" / "Good afternoon" / "Good evening" by the hour in India. */
+export function greeting(now = new Date()) {
+  const h = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hour12: false, timeZone: IST }).format(now));
+  return h < 5 ? "Working late" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+}
+
+/** "November" for a YYYY-MM-DD day. */
+export function monthName(day: string) {
+  return new Intl.DateTimeFormat("en-GB", { month: "long", timeZone: "UTC" }).format(new Date(`${day}T00:00:00Z`));
+}
+
+/** Minutes from now until that instant (negative once it has passed). */
+export function minutesUntil(value: string | Date, now = new Date()) {
+  return (toDate(value).getTime() - now.getTime()) / 60_000;
+}

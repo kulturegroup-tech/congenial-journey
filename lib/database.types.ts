@@ -1217,6 +1217,7 @@ export type Database = {
           exited_at: string | null
           follow_up_on: string | null
           id: string
+          interview_at: string | null
           mandate_id: string
           owner_id: string | null
           stage: Database["public"]["Enums"]["pipeline_stage"]
@@ -1231,6 +1232,7 @@ export type Database = {
           exited_at?: string | null
           follow_up_on?: string | null
           id?: string
+          interview_at?: string | null
           mandate_id: string
           owner_id?: string | null
           stage?: Database["public"]["Enums"]["pipeline_stage"]
@@ -1245,6 +1247,7 @@ export type Database = {
           exited_at?: string | null
           follow_up_on?: string | null
           id?: string
+          interview_at?: string | null
           mandate_id?: string
           owner_id?: string | null
           stage?: Database["public"]["Enums"]["pipeline_stage"]
@@ -1641,6 +1644,7 @@ export type Database = {
           home_state_code: string
           id: boolean
           invoice_fy: string | null
+          monthly_joining_target: number
           invoice_prefix: string
           next_invoice_serial: number
           sac_code: string
@@ -1658,6 +1662,7 @@ export type Database = {
           home_state_code?: string
           id?: boolean
           invoice_fy?: string | null
+          monthly_joining_target?: number
           invoice_prefix?: string
           next_invoice_serial?: number
           sac_code?: string
@@ -1675,6 +1680,7 @@ export type Database = {
           home_state_code?: string
           id?: boolean
           invoice_fy?: string | null
+          monthly_joining_target?: number
           invoice_prefix?: string
           next_invoice_serial?: number
           sac_code?: string
@@ -1913,6 +1919,7 @@ export type Database = {
         }[]
       }
       financial_year: { Args: { p_date: string }; Returns: string }
+      undo_pipeline_adds: { Args: { p_ids: string[] }; Returns: number }
       create_invoice: {
         Args: { p_invoice_date?: string; p_placement: string }
         Returns: {

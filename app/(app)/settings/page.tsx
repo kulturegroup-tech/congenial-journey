@@ -66,19 +66,19 @@ async function SettingsBody() {
       </section>
 
       <section>
-        <h2 className="mb-2 font-semibold">My PIN</h2>
+        <h2 className="mb-2.5 text-[16.5px] font-semibold">My PIN</h2>
         <Card className="p-4">
           <PinForm />
         </Card>
       </section>
 
       <section>
-        <h2 className="mb-2 font-semibold">Firm details and defaults</h2>
+        <h2 className="mb-2.5 text-[16.5px] font-semibold">Firm details and defaults</h2>
         <Card className="p-5">{settings.data ? <FirmForm s={settings.data} canEdit={isAdmin} /> : <p className="text-muted">Couldn&apos;t load settings.</p>}</Card>
       </section>
 
       <section>
-        <h2 className="mb-2 font-semibold">Practice areas</h2>
+        <h2 className="mb-2.5 text-[16.5px] font-semibold">Practice areas</h2>
         <Card className="space-y-4 p-4">
           <div className="flex flex-wrap gap-1.5">
             {(practices.data ?? []).map((p) => (

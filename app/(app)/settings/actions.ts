@@ -62,6 +62,7 @@ export async function saveFirmSettings(_: ActionState, fd: FormData): Promise<Ac
         stale_after_working_days: num(fd, "stale_after_working_days") ?? 5,
         default_cooling_off_months: num(fd, "default_cooling_off_months") ?? 6,
         default_resume_validity_months: num(fd, "default_resume_validity_months") ?? 12,
+        ...(num(fd, "monthly_joining_target") != null ? { monthly_joining_target: num(fd, "monthly_joining_target")! } : {}),
         updated_at: new Date().toISOString(),
       },
       { count: "exact" },

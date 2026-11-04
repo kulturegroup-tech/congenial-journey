@@ -52,27 +52,27 @@ async function Billing() {
   return (
     <div className="space-y-8">
       <div className="grid gap-3 md:grid-cols-3">
-        <Card className="p-4">
+        <Card className="bg-sand p-5">
           <p className="text-[13px] text-muted">Outstanding</p>
-          <p className="mt-1 text-[22px] font-semibold tabular-nums">{formatRupees(outstanding)}</p>
+          <p className="mt-1 font-display text-[36px] leading-tight tabular-nums">{formatRupees(outstanding)}</p>
           <p className="text-[12px] text-muted">{open.length} invoices sent and unpaid</p>
         </Card>
-        <Card className={`p-4 ${overdue.length ? "border-danger/40" : ""}`}>
+        <Card className="bg-clay p-5">
           <p className="text-[13px] text-muted">Overdue</p>
-          <p className={`mt-1 text-[22px] font-semibold tabular-nums ${overdue.length ? "text-danger" : ""}`}>
+          <p className={`mt-1 font-display text-[36px] leading-tight tabular-nums ${overdue.length ? "text-danger" : ""}`}>
             {formatRupees(overdue.reduce((s, i) => s + Number(i.total) - paidOf(i), 0))}
           </p>
           <p className="text-[12px] text-muted">{overdue.length} past their due date</p>
         </Card>
-        <Card className={`p-4 ${toRaise.length ? "border-warn/40" : ""}`}>
+        <Card className="bg-mist p-5">
           <p className="text-[13px] text-muted">Invoices to raise</p>
-          <p className={`mt-1 text-[22px] font-semibold tabular-nums ${toRaise.length ? "text-warn" : ""}`}>{toRaise.length}</p>
+          <p className={`mt-1 font-display text-[36px] leading-tight tabular-nums ${toRaise.length ? "text-warn" : ""}`}>{toRaise.length}</p>
           <p className="text-[12px] text-muted">Joined, not yet invoiced</p>
         </Card>
       </div>
 
       <section>
-        <h2 className="mb-2 font-semibold">Placements</h2>
+        <h2 className="mb-2.5 text-[16.5px] font-semibold">Placements</h2>
         {placements.length ? (
           <Table head={["Candidate", "Client · mandate", "Salary", "Fee", "Joining", "Status", "Invoice"]}>
             {placements.map((p) => {
@@ -152,7 +152,7 @@ async function Billing() {
       </section>
 
       <section>
-        <h2 className="mb-2 font-semibold">Invoices</h2>
+        <h2 className="mb-2.5 text-[16.5px] font-semibold">Invoices</h2>
         {invoices.length ? (
           <Table head={["Invoice", "Client", "Candidate", "Date", "Total", "Received", "Due", "Status"]}>
             {invoices.map((i) => {
@@ -161,7 +161,7 @@ async function Billing() {
               return (
                 <tr key={i.id}>
                   <td>
-                    <Link href={`/billing/invoices/${i.id}`} className="font-mono font-medium hover:text-accent">
+                    <Link href={`/billing/invoices/${i.id}`} className="font-semibold tabular-nums hover:text-accent">
                       {i.invoice_number}
                     </Link>
                   </td>

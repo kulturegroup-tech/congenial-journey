@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { Search, UserPlus } from "lucide-react";
 import { Button } from "@/components/form";
+import { useToast } from "@/components/toast";
+import { Avatar } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { ago, formatPqe } from "@/lib/format";
-import { addCandidates, setMandateStatus } from "../actions";
+import { addCandidates, setMandateStatus, undoAdds } from "../actions";
 
 const statuses = [
   ["active", "Active"],
@@ -16,29 +19,28 @@ const statuses = [
 
 export function StatusControl({ id, status }: { id: string; status: string }) {
   const [pending, start] = useTransition();
-  const [err, setErr] = useState<string | null>(null);
+  const toast = useToast();
   return (
-    <div className="flex items-center gap-2">
-      <div className="inline-flex overflow-hidden rounded-lg border border-line text-[13px]">
-        {statuses.map(([v, l]) => (
-          <button
-            key={v}
-            type="button"
-            disabled={pending || v === status}
-            onClick={() =>
-              start(async () => {
-                const r = await setMandateStatus(id, v);
-                setErr(r.error ?? null);
-              })
-            }
-            className={`border-l border-line px-3 py-1.5 first:border-l-0 ${v === status ? "bg-accent text-white" : "bg-surface hover:bg-canvas"}`}
-          >
-            {l}
-          </button>
-        ))}
-      </div>
-      {status !== "active" ? <span className="text-[12px] text-muted">Setting it back to Active reopens it and re-runs re-engagement.</span> : null}
-      {err ? <span className="text-[12px] text-danger">{err}</span> : null}
+    <div className="flex rounded-full bg-side p-1">
+      {statuses.map(([v, l]) => (
+        <button
+          key={v}
+          type="button"
+          disabled={pending || v === status}
+          onClick={() =>
+            start(async () => {
+              const r = await setMandateStatus(id, v);
+              toast({
+                message: r.error ?? (v === "active" && status !== "active" ? "Reopened. Suggestions are being refreshed." : `Marked ${l.toLowerCase()}`),
+                action: r.error ? undefined : { label: "Undo", onClick: () => start(async () => void (await setMandateStatus(id, status as never))) },
+              });
+            })
+          }
+          className={`rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors ${v === status ? "bg-surface text-ink shadow-[0_4px_12px_-8px_rgb(29_42_36/0.5)]" : "text-muted hover:text-ink"}`}
+        >
+          {l}
+        </button>
+      ))}
     </div>
   );
 }
@@ -53,96 +55,127 @@ export type Match = {
   last_called_at: string | null;
 };
 
-/** Past candidates who fit: re-engagement, the top-priority feature. */
+/** People we've spoken to before who fit this mandate: the top-priority feature. */
 export function Matches({ mandateId, matches }: { mandateId: string; matches: Match[] }) {
   const [picked, setPicked] = useState<string[]>([]);
   const [pending, start] = useTransition();
-  const [msg, setMsg] = useState<string | null>(null);
-  if (!matches.length) return <p className="text-[13px] text-muted">Nobody in the database fits yet. Interest tags from screening calls feed this list.</p>;
+  const toast = useToast();
+  if (!matches.length)
+    return <p className="rounded-2xl bg-white/60 px-4 py-4 text-[13px] text-ink/70">Nobody fits yet. What people tell you on screening calls (firms, cities, roles they want) feeds this list.</p>;
   const toggle = (id: string) => setPicked(picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id]);
+  const add = (ids: string[]) =>
+    start(async () => {
+      const r = await addCandidates(mandateId, ids);
+      if (r.error) return toast({ message: r.error });
+      setPicked([]);
+      toast({
+        message: `${ids.length === 1 ? "1 person" : `${ids.length} people`} added to Yet to speak`,
+        action: r.added?.length ? { label: "Undo", onClick: () => start(async () => void (await undoAdds(r.added!))) } : undefined,
+      });
+    });
   return (
     <div>
-      <ul className="divide-y divide-line">
-        {matches.map((m) => (
-          <li key={m.candidate_id} className="flex gap-2.5 py-2">
-            <input type="checkbox" className="mt-1" checked={picked.includes(m.candidate_id)} onChange={() => toggle(m.candidate_id)} />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-baseline justify-between gap-2">
-                <Link href={`/candidates/${m.candidate_id}`} className="font-medium hover:text-accent">
-                  {m.full_name}
-                </Link>
-                <span className="text-[12px] text-faint">{m.pqe_today != null ? formatPqe(m.pqe_today) : ""}</span>
-              </div>
-              <p className="text-[12px] text-muted">{m.reasons.join(" · ")}</p>
-              <p className="text-[12px] text-faint">{m.last_called_at ? `Last call: ${m.last_by ?? "someone"}, ${ago(m.last_called_at)}` : "Never called"}</p>
-            </div>
-          </li>
-        ))}
+      <ul className="space-y-1.5">
+        {matches.map((m) => {
+          const on = picked.includes(m.candidate_id);
+          return (
+            <li key={m.candidate_id}>
+              <label className={`state state-ink flex cursor-pointer items-start gap-3 overflow-hidden rounded-2xl px-3 py-2.5 transition-colors ${on ? "bg-white" : "bg-white/55"}`}>
+                <input type="checkbox" className="mt-2.5 accent-[var(--color-accent)]" checked={on} onChange={() => toggle(m.candidate_id)} />
+                <Avatar name={m.full_name} size={32} />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-baseline justify-between gap-2">
+                    <Link href={`/candidates/${m.candidate_id}`} className="font-semibold hover:text-accent">
+                      {m.full_name}
+                    </Link>
+                    <span className="text-[12px] text-muted">{m.pqe_today != null ? formatPqe(m.pqe_today) : ""}</span>
+                  </span>
+                  <span className="block text-[12px] text-ink/70">{m.reasons.join(" · ")}</span>
+                  <span className="block text-[11.5px] text-muted">{m.last_called_at ? `${m.last_by ?? "Someone"} spoke to them ${ago(m.last_called_at)}` : "Never called"}</span>
+                </span>
+              </label>
+            </li>
+          );
+        })}
       </ul>
-      <div className="mt-2 flex items-center gap-2">
-        <Button
-          size="sm"
-          variant="primary"
-          disabled={!picked.length || pending}
-          onClick={() =>
-            start(async () => {
-              const r = await addCandidates(mandateId, picked);
-              setMsg(r.error ?? `Added ${picked.length} to Mapped.`);
-              if (r.ok) setPicked([]);
-            })
-          }
-        >
-          {pending ? "Adding…" : `Add ${picked.length || ""} to mandate`}
+      <div className="mt-3 flex items-center gap-2">
+        <Button variant="primary" size="sm" disabled={!picked.length || pending} onClick={() => add(picked)}>
+          {picked.length ? `Add ${picked.length}` : "Tick people to add"}
         </Button>
-        {msg ? <span className="text-[12px] text-muted">{msg}</span> : null}
+        {matches.length > 1 ? (
+          <Button variant="ghost" size="sm" disabled={pending} onClick={() => add(matches.map((m) => m.candidate_id))}>
+            Add all {matches.length}
+          </Button>
+        ) : null}
       </div>
     </div>
   );
 }
 
+type Hit = { candidate_id: string; full_name: string; current_firm: string | null; pqe_today: number | null };
+
 /** Search our database and put someone on this mandate. */
 export function AddCandidate({ mandateId }: { mandateId: string }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
-  const [hits, setHits] = useState<{ candidate_id: string; full_name: string; current_firm: string | null; pqe_today: number | null }[]>([]);
+  const [hits, setHits] = useState<{ q: string; rows: Hit[] } | null>(null);
   const [pending, start] = useTransition();
-  const [msg, setMsg] = useState<string | null>(null);
+  const toast = useToast();
+  const term = q.trim();
 
-  async function search(term: string) {
-    setQ(term);
-    if (term.trim().length < 3) return setHits([]);
-    const { data } = await createClient().rpc("lookup", { q: term.trim(), p_limit: 8 });
-    setHits(data ?? []);
-  }
+  useEffect(() => {
+    if (term.length < 3) return;
+    let live = true;
+    const t = setTimeout(async () => {
+      const { data } = await createClient().rpc("lookup", { q: term, p_limit: 8 });
+      if (live) setHits({ q: term, rows: (data as Hit[]) ?? [] });
+    }, 180);
+    return () => {
+      live = false;
+      clearTimeout(t);
+    };
+  }, [term]);
+  const rows = term.length >= 3 && hits?.q === term ? hits.rows : [];
 
   return (
     <>
-      <Button onClick={() => setOpen(true)}>Add candidate</Button>
+      <Button variant="primary" onClick={() => setOpen(true)}>
+        <UserPlus size={16} />
+        Add someone
+      </Button>
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 pt-24" onClick={() => setOpen(false)}>
-          <div className="w-full max-w-lg rounded-xl border border-line bg-surface p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <input
-              autoFocus
-              value={q}
-              onChange={(e) => search(e.target.value)}
-              onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
-              placeholder="Name, phone, email or LinkedIn URL"
-              className="w-full rounded-lg border border-line px-3 py-2.5 outline-none focus:border-accent"
-            />
-            <ul className="mt-2 max-h-80 divide-y divide-line overflow-y-auto">
-              {hits.map((h) => (
-                <li key={h.candidate_id} className="flex items-center justify-between gap-2 py-2">
-                  <span>
-                    <span className="font-medium">{h.full_name}</span>
-                    <span className="block text-[12px] text-muted">{[h.current_firm, h.pqe_today != null ? formatPqe(h.pqe_today) : null].filter(Boolean).join(" · ")}</span>
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-ink/25 px-4 pt-[14vh]" onMouseDown={() => setOpen(false)}>
+          <div className="pop w-full max-w-lg overflow-hidden rounded-3xl bg-surface shadow-[0_30px_80px_-24px_rgb(29_42_36/0.55)]" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 border-b border-line px-5">
+              <Search size={18} className="text-muted" />
+              <input
+                autoFocus
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
+                placeholder="Name, phone, email or LinkedIn link"
+                className="h-14 flex-1 bg-transparent text-[15px] outline-none placeholder:text-faint"
+              />
+            </div>
+            <ul className="max-h-80 overflow-y-auto p-2">
+              {rows.map((h) => (
+                <li key={h.candidate_id} className="flex items-center gap-3 rounded-2xl px-3 py-2">
+                  <Avatar name={h.full_name} size={32} />
+                  <span className="flex-1">
+                    <b className="font-semibold">{h.full_name}</b>
+                    <span className="block text-[12.5px] text-muted">{[h.current_firm, h.pqe_today != null ? formatPqe(h.pqe_today) : null].filter(Boolean).join(" · ")}</span>
                   </span>
                   <Button
                     size="sm"
+                    variant="secondary"
                     disabled={pending}
                     onClick={() =>
                       start(async () => {
                         const r = await addCandidates(mandateId, [h.candidate_id]);
-                        setMsg(r.error ?? `${h.full_name} added to Mapped.`);
+                        toast({
+                          message: r.error ?? `${h.full_name} added to Yet to speak`,
+                          action: r.added?.length ? { label: "Undo", onClick: () => start(async () => void (await undoAdds(r.added!))) } : undefined,
+                        });
                       })
                     }
                   >
@@ -150,17 +183,17 @@ export function AddCandidate({ mandateId }: { mandateId: string }) {
                   </Button>
                 </li>
               ))}
+              {term.length >= 3 && hits?.q === term && !rows.length ? (
+                <li className="px-3 py-3 text-[13px] text-muted">
+                  Not in the database yet.{" "}
+                  <Link href={`/candidates/new?q=${encodeURIComponent(q)}`} className="font-medium text-accent underline underline-offset-2">
+                    Add them as a new candidate
+                  </Link>
+                  , then add them here.
+                </li>
+              ) : null}
+              {term.length < 3 ? <li className="px-3 py-3 text-[13px] text-muted">Type at least three letters or digits.</li> : null}
             </ul>
-            {q.trim().length >= 3 && !hits.length ? (
-              <p className="py-3 text-[13px] text-muted">
-                Not in the database.{" "}
-                <Link href={`/candidates/new?q=${encodeURIComponent(q)}`} className="text-accent underline">
-                  Add them as a new candidate
-                </Link>
-                , then add them here.
-              </p>
-            ) : null}
-            {msg ? <p className="pt-2 text-[13px] text-ok">{msg}</p> : null}
           </div>
         </div>
       ) : null}

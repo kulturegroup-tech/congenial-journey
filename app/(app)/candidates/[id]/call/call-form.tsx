@@ -125,12 +125,12 @@ export function CallForm({
 
       <Card className="p-5">
         <div className="mb-1 flex items-center justify-between">
-          <h3 className="font-semibold">5 · Firms, cities and roles they want</h3>
+          <h3 className="text-[15.5px] font-semibold">5 · Firms, cities and roles they want</h3>
           <Button size="sm" variant="ghost" onClick={() => setTags([...tags, { ...emptyTag }])}>
             + Another
           </Button>
         </div>
-        <p className="mb-3 text-[12px] text-muted">Each row is a re-engagement trigger: when a matching mandate opens, you get an alert.</p>
+        <p className="mb-3 text-[12px] text-muted">When a mandate opens that matches a row here, they show up as suggested for it.</p>
         <div className="space-y-2">
           {tags.map((t, i) => (
             <div key={i} className="grid grid-cols-[1.3fr_1fr_1.2fr_1.3fr_auto] gap-2">
@@ -156,7 +156,7 @@ export function CallForm({
           <Textarea name="applications_made" rows={2} />
         </Field>
         <div className="mb-1 mt-4 flex items-center justify-between">
-          <h3 className="font-semibold">Where their CV has already gone</h3>
+          <h3 className="text-[15.5px] font-semibold">Where their CV has already gone</h3>
           <Button size="sm" variant="ghost" onClick={() => setPriors([...priors, { ...emptyPrior }])}>
             + Another
           </Button>
@@ -202,7 +202,7 @@ export function CallForm({
           ].map(([v, l]) => (
             <label
               key={v}
-              className={`cursor-pointer rounded-md border px-3 py-1.5 text-[13px] ${outcome === v ? "border-accent bg-accent-soft text-accent" : "border-line hover:bg-canvas"}`}
+              className={`cursor-pointer rounded-full border px-4 py-2 text-[13px] font-medium transition-colors ${outcome === v ? "border-accent bg-accent text-white" : "border-line hover:bg-canvas"}`}
             >
               <input type="radio" name="outcome" value={v} className="sr-only" checked={outcome === v} onChange={() => setOutcome(v)} />
               {l}

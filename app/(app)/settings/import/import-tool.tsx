@@ -112,13 +112,13 @@ export function ImportTool({ mandates }: { mandates: Opt[] }) {
           Rows are matched on LinkedIn, phone and email, so importing the same file twice won&apos;t create duplicates.
         </p>
         <input type="file" accept=".csv,text/csv" onChange={(e) => e.target.files?.[0] && load(e.target.files[0])} className="text-[13px]" />
-        {error ? <p className="mt-3 rounded-lg bg-danger-soft px-3 py-2 text-[13px] text-danger">{error}</p> : null}
+        {error ? <p className="mt-3 rounded-2xl bg-danger-soft px-4 py-2.5 text-[13px] text-danger">{error}</p> : null}
       </Card>
 
       {headers.length ? (
         <>
           <Card className="p-5">
-            <h3 className="mb-1 font-semibold">
+            <h3 className="mb-1.5 text-[15.5px] font-semibold">
               {fileName}: {rows.length} rows
             </h3>
             <p className="mb-3 text-[13px] text-muted">Check which column is which. Leave a field blank if the file doesn&apos;t have it.</p>
@@ -144,7 +144,7 @@ export function ImportTool({ mandates }: { mandates: Opt[] }) {
           </Card>
 
           <Card className="p-5">
-            <h3 className="mb-1 font-semibold">Which mandate?</h3>
+            <h3 className="mb-1.5 text-[15.5px] font-semibold">Which mandate?</h3>
             {positions.length ? (
               <>
                 <p className="mb-3 text-[13px] text-muted">
@@ -188,7 +188,7 @@ export function ImportTool({ mandates }: { mandates: Opt[] }) {
           </Card>
 
           <Card className="overflow-x-auto p-5">
-            <h3 className="mb-2 font-semibold">Preview</h3>
+            <h3 className="mb-2.5 text-[15.5px] font-semibold">Preview</h3>
             <table className="w-full text-[12px]">
               <thead>
                 <tr className="text-left text-muted">
@@ -232,7 +232,7 @@ export function ImportTool({ mandates }: { mandates: Opt[] }) {
 
       {results ? (
         <Card className="p-5">
-          <h3 className="mb-2 font-semibold">Done</h3>
+          <h3 className="mb-2.5 text-[15.5px] font-semibold">Done</h3>
           <p className="text-[13px]">
             <b>{count("imported")}</b> new · <b>{count("merged")}</b> matched to someone we had · <b className="text-warn">{count("needs_review")}</b> to review ·{" "}
             <b>{count("skipped")}</b> skipped (no name)

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { ButtonLink } from "@/components/form";
-import { Badge, Empty, Page, PageHeader, Table, TableSkeleton } from "@/components/ui";
+import { PersonRow } from "@/components/context-menu";
+import { Avatar, Badge, Empty, Page, PageHeader, Table, TableSkeleton } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getPracticeAreas } from "@/lib/data/options";
 import { getTeamNames } from "@/lib/auth/member";
@@ -78,13 +79,18 @@ async function Filtered({ searchParams }: { searchParams: SP }) {
           </p>
           <Table head={["Candidate", "Firm", "PQE", "Practice", "City", "Phone", "Last call"]}>
             {data.map((c) => (
-              <tr key={c.id} className="hover:bg-canvas">
+              <PersonRow as="tr" key={c.id} person={{ id: c.id!, name: c.full_name ?? "", phone: c.phones?.[0] }}>
                 <td>
-                  <Link href={`/candidates/${c.id}`} className="font-medium hover:text-accent">
-                    {c.full_name}
-                  </Link>
-                  {c.review_note === "Demo data" ? <span className="ml-2"><Badge>Demo</Badge></span> : null}
-                  <div className="text-[12px] text-muted">{c.designation ?? ""}</div>
+                  <div className="flex items-center gap-3">
+                    <Avatar name={c.full_name ?? "?"} size={32} />
+                    <div>
+                      <Link href={`/candidates/${c.id}`} className="font-semibold hover:text-accent">
+                        {c.full_name}
+                      </Link>
+                      {c.review_note === "Demo data" ? <Badge className="ml-2">Demo</Badge> : null}
+                      <div className="text-[12px] text-muted">{c.designation ?? ""}</div>
+                    </div>
+                  </div>
                 </td>
                 <td>{c.current_firm ?? <span className="text-faint">—</span>}</td>
                 <td className="whitespace-nowrap">
@@ -93,8 +99,8 @@ async function Filtered({ searchParams }: { searchParams: SP }) {
                 </td>
                 <td className="max-w-48 text-[13px]">{(c.practice_areas ?? []).join(", ") || <span className="text-faint">—</span>}</td>
                 <td>{c.current_city ?? <span className="text-faint">—</span>}</td>
-                <td className="whitespace-nowrap font-mono text-[13px]">
-                  {c.phones?.[0] ? formatPhone(c.phones[0]) : <span className="font-sans text-faint">No number</span>}
+                <td className="whitespace-nowrap text-[13px] tabular-nums">
+                  {c.phones?.[0] ? formatPhone(c.phones[0]) : <span className="text-faint">No number</span>}
                 </td>
                 <td className="whitespace-nowrap">
                   {c.last_called_at ? (
@@ -106,7 +112,7 @@ async function Filtered({ searchParams }: { searchParams: SP }) {
                     <span className="text-faint">Never</span>
                   )}
                 </td>
-              </tr>
+              </PersonRow>
             ))}
           </Table>
         </>

@@ -47,7 +47,7 @@ const kindLabel: Record<string, string> = {
   payment_due: "Payment due",
   replacement_window_ending: "Replacement window",
   follow_up: "Follow up",
-  stale_mandate: "Stale mandate",
+  stale_mandate: "Going quiet",
   call_today: "Call today",
   agreement_expiring: "Agreement ending",
 };

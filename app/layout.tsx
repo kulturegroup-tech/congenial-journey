@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
+import localFont from "next/font/local";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import "./globals.css";
+
+// Display serif for page titles and greetings. Everything else is Geist.
+const instrument = localFont({ src: "./fonts/InstrumentSerif-Regular.woff2", variable: "--font-instrument", weight: "400", display: "swap" });
 
 export const metadata: Metadata = {
   title: { default: "Paradigm Shifters", template: "%s · Paradigm Shifters" },
@@ -11,7 +15,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-IN" className={`${GeistSans.variable} ${GeistMono.variable} h-full antialiased`}>
+    <html lang="en-IN" className={`${GeistSans.variable} ${GeistMono.variable} ${instrument.variable} h-full antialiased`}>
       <body className="min-h-full font-sans text-[14px]">{children}</body>
     </html>
   );

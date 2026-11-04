@@ -82,7 +82,7 @@ export function LoginForm() {
 
   if (sentTo) {
     return (
-      <div className="rounded-xl border border-line bg-surface px-6 py-6">
+      <div>
         <p className="font-medium">Check your inbox</p>
         <p className="mt-1 text-muted">We sent a sign-in link to {sentTo}. Open it on this device.</p>
         <button type="button" onClick={() => setSentTo(null)} className="mt-4 text-[13px] text-accent hover:underline">
@@ -93,15 +93,15 @@ export function LoginForm() {
   }
 
   return (
-    <div className="rounded-xl border border-line bg-surface px-6 py-6">
-      {message ? <p className="mb-4 rounded-lg bg-danger-soft px-3 py-2 text-[13px] text-danger">{message}</p> : null}
+    <div>
+      {message ? <p className="mb-4 rounded-2xl bg-danger-soft px-4 py-2.5 text-[13px] text-danger">{message}</p> : null}
       {googleEnabled ? (
         <>
           <button
             type="button"
             onClick={withGoogle}
             disabled={busy !== null}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 font-medium text-white hover:opacity-95 disabled:opacity-60"
+            data-ripple className="state flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-accent px-4 font-medium text-white disabled:opacity-60"
           >
             {busy === "google" ? "Opening Google…" : "Sign in with Google"}
           </button>
@@ -122,7 +122,7 @@ export function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
-            className="w-full rounded-lg border border-line px-3 py-2.5 outline-none focus:border-accent"
+            className="w-full rounded-xl border border-transparent bg-canvas px-3.5 py-3 outline-none transition-colors focus:border-accent/30 focus:bg-surface"
           />
           <input
             type="password"
@@ -132,12 +132,12 @@ export function LoginForm() {
             value={pin}
             onChange={(e) => setPin(e.target.value)}
             placeholder="PIN"
-            className="w-full rounded-lg border border-line px-3 py-2.5 tracking-widest outline-none focus:border-accent"
+            className="w-full rounded-xl border border-transparent bg-canvas px-3.5 py-3 tracking-[0.3em] outline-none transition-colors focus:border-accent/30 focus:bg-surface"
           />
           <button
             type="submit"
             disabled={busy !== null}
-            className="w-full rounded-lg bg-accent px-4 py-2.5 font-medium text-white hover:opacity-95 disabled:opacity-60"
+            data-ripple className="state h-12 w-full overflow-hidden rounded-full bg-accent px-4 font-medium text-white disabled:opacity-60"
           >
             {busy === "pin" ? "Signing in…" : "Sign in"}
           </button>
@@ -150,12 +150,12 @@ export function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@paradigmshifters.in"
-            className="w-full rounded-lg border border-line px-3 py-2.5 outline-none focus:border-accent"
+            className="w-full rounded-xl border border-transparent bg-canvas px-3.5 py-3 outline-none transition-colors focus:border-accent/30 focus:bg-surface"
           />
           <button
             type="submit"
             disabled={busy !== null}
-            className="w-full rounded-lg border border-line px-4 py-2.5 font-medium hover:bg-canvas disabled:opacity-60"
+            className="state h-12 w-full rounded-full px-4 font-medium ring-1 ring-inset ring-line disabled:opacity-60"
           >
             {busy === "email" ? "Sending…" : "Email me a sign-in link"}
           </button>

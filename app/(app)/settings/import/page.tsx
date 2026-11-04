@@ -55,7 +55,7 @@ async function ImportBody() {
       <ImportTool mandates={mandates} />
 
       <section>
-        <h2 className="mb-1 font-semibold">Review list ({reviews.length})</h2>
+        <h2 className="mb-1.5 text-[16.5px] font-semibold">Review list ({reviews.length})</h2>
         <p className="mb-2 text-[13px] text-muted">Possible duplicates, unreadable PQE, phones already on someone else, and rows that failed.</p>
         {reviews.length ? (
           <Table head={["Row", "Candidate", "Issue", ""]}>

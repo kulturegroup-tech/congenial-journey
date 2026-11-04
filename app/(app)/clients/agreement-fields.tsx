@@ -16,7 +16,7 @@ export function AgreementFields({ a, optionalStart }: { a?: Agreement; optionalS
           <Input type="date" name="ends_on" defaultValue={a?.ends_on ?? ""} />
         </Field>
       </div>
-      <fieldset className="grid gap-3 rounded-lg border border-line p-3 md:grid-cols-4">
+      <fieldset className="grid gap-3 rounded-2xl bg-side/70 p-4 md:grid-cols-4">
         <legend className="px-1 text-[13px] font-medium">Fees, % of annual fixed salary</legend>
         <Field label="Lawyers">
           <Input name="fee_legal" inputMode="decimal" defaultValue={a?.fee_legal ?? ""} placeholder="10" />
@@ -28,7 +28,7 @@ export function AgreementFields({ a, optionalStart }: { a?: Agreement; optionalS
           <input type="checkbox" name="no_fee_if_backed_out" defaultChecked={a?.no_fee_if_backed_out ?? true} /> No fee if they back out before joining
         </label>
       </fieldset>
-      <fieldset className="grid gap-3 rounded-lg border border-line p-3 md:grid-cols-4">
+      <fieldset className="grid gap-3 rounded-2xl bg-side/70 p-4 md:grid-cols-4">
         <legend className="px-1 text-[13px] font-medium">Duplicates and replacement</legend>
         <Field label="Cooling-off (months)" hint="CV sent by anyone inside this = duplicate.">
           <Input name="cooling_off_months" type="number" min={0} defaultValue={a?.cooling_off_months ?? 6} />
@@ -43,7 +43,7 @@ export function AgreementFields({ a, optionalStart }: { a?: Agreement; optionalS
           <input type="checkbox" name="replacement_excludes_medical" defaultChecked={a?.replacement_excludes_medical ?? true} /> Not if they leave for medical reasons
         </label>
       </fieldset>
-      <fieldset className="grid gap-3 rounded-lg border border-line p-3 md:grid-cols-3">
+      <fieldset className="grid gap-3 rounded-2xl bg-side/70 p-4 md:grid-cols-3">
         <legend className="px-1 text-[13px] font-medium">Invoicing</legend>
         <Field label="Raise invoice within (days of joining)" hint="Blank = no deadline. Trilegal: 30.">
           <Input name="invoice_deadline_days" type="number" min={0} defaultValue={a?.invoice_deadline_days ?? ""} />
@@ -58,7 +58,7 @@ export function AgreementFields({ a, optionalStart }: { a?: Agreement; optionalS
           </Select>
         </Field>
       </fieldset>
-      <fieldset className="grid gap-3 rounded-lg border border-line p-3 md:grid-cols-3">
+      <fieldset className="grid gap-3 rounded-2xl bg-side/70 p-4 md:grid-cols-3">
         <legend className="px-1 text-[13px] font-medium">Sharing CVs</legend>
         <label className="flex items-center gap-2 text-[13px]">
           <input type="checkbox" name="requires_portal" defaultChecked={a?.requires_portal} /> Must also upload on their portal

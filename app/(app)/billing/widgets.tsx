@@ -68,7 +68,7 @@ function PlacementForm({ p, close }: { p: PlacementRow; close: () => void }) {
         </Field>
       </div>
       {status === "left_in_window" ? (
-        <div className="grid grid-cols-2 gap-3 rounded-lg bg-warn-soft p-3">
+        <div className="grid grid-cols-2 gap-3 rounded-2xl bg-warn-soft p-4">
           <Field label="Left on *">
             <Input type="date" name="left_on" required defaultValue={p.left_on ?? ""} />
           </Field>

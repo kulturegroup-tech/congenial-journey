@@ -28,10 +28,10 @@ const ruleLabel: Record<string, string> = {
 };
 
 function Findings({ findings }: { findings: Finding[] }) {
-  if (!findings.length) return <p className="rounded-lg bg-ok-soft px-3 py-2 text-[13px] text-ok">No duplicate found for this client.</p>;
+  if (!findings.length) return <p className="rounded-2xl bg-ok-soft px-4 py-2.5 text-[13px] text-ok">No duplicate found for this client.</p>;
   const blocking = findings.some((f) => f.blocking);
   return (
-    <div className={`rounded-lg px-3 py-2 text-[13px] ${blocking ? "bg-danger-soft text-danger" : "bg-warn-soft text-warn"}`}>
+    <div className={`rounded-2xl px-4 py-3 text-[13px] ${blocking ? "bg-danger-soft text-danger" : "bg-warn-soft text-warn"}`}>
       <p className="font-medium">{blocking ? "Duplicate: this CV already reached the client inside the cooling-off period." : "Worth knowing before you share:"}</p>
       <ul className="mt-1 list-disc pl-5">
         {findings.map((f, i) => (
@@ -132,18 +132,18 @@ function ShareForm({ entryId, ctx, onClose, onShared }: { entryId: string; ctx: 
   if (state?.ok) {
     return (
       <div className="space-y-4">
-        <p className="rounded-lg bg-ok-soft px-3 py-2 text-ok">
+        <p className="rounded-2xl bg-ok-soft px-4 py-2.5 text-ok">
           Share logged. This CV stays ours at {ctx.mandate.client} until <b>{formatDate(state.validUntil!)}</b>.
         </p>
         <p className="text-[13px] text-muted">Now send it. Attach the CV to the email or WhatsApp yourself; the note is filled in.</p>
         <div className="flex flex-wrap gap-2">
           {channels.includes("email") ? (
-            <a href={mailto} className="inline-flex items-center rounded-lg bg-accent px-3.5 py-2 font-medium text-white hover:opacity-90">
+            <a href={mailto} className="state inline-flex h-10 items-center rounded-full bg-accent px-4 font-medium text-white">
               Open email
             </a>
           ) : null}
           {channels.includes("whatsapp") ? (
-            <a href={whatsapp} target="_blank" rel="noreferrer" className="inline-flex items-center rounded-lg bg-accent px-3.5 py-2 font-medium text-white hover:opacity-90">
+            <a href={whatsapp} target="_blank" rel="noreferrer" className="state inline-flex h-10 items-center rounded-full bg-accent px-4 font-medium text-white">
               Open WhatsApp
             </a>
           ) : null}
@@ -236,7 +236,7 @@ function ShareForm({ entryId, ctx, onClose, onShared }: { entryId: string; ctx: 
       </Field>
 
       {blocking ? (
-        <div className="grid gap-3 rounded-lg border border-danger/30 p-3 md:grid-cols-2">
+        <div className="grid gap-3 rounded-2xl bg-danger-soft/60 p-4 md:grid-cols-2">
           <input type="hidden" name="override_reason" value={overrideReason} />
           <Field label="Share anyway? Pick the reason *" hint="Saved with the share, so the team can see why it went through.">
             <Select value={reason} onChange={(e) => setReason(e.target.value)} required>
@@ -254,10 +254,10 @@ function ShareForm({ entryId, ctx, onClose, onShared }: { entryId: string; ctx: 
         </div>
       ) : null}
 
-      {state?.error ? <p className="rounded-lg bg-danger-soft px-3 py-2 text-[13px] text-danger">{state.error}</p> : null}
+      {state?.error ? <p className="rounded-2xl bg-danger-soft px-4 py-2.5 text-[13px] text-danger">{state.error}</p> : null}
       <div className="flex items-center gap-2">
         <SubmitButton variant={blocking ? "danger" : "primary"} pendingText="Checking…">
-          {blocking ? "Share anyway" : "Log share"}
+          {blocking ? "Send anyway" : "Mark as shared"}
         </SubmitButton>
         <Button variant="ghost" onClick={onClose}>
           Cancel

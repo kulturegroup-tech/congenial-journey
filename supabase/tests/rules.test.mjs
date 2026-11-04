@@ -352,6 +352,23 @@ await as(R2);
 await fails(`select import_batch('odoo', '[]'::jsonb)`, /Only an admin/, 'only an admin can import');
 await as(R1);
 
+
+console.log('\nUndo a bulk add');
+const Mu = await id(`insert into mandates (client_id, title, practice_area, city) values ($1, 'Undo test role', 'TMT', 'Mumbai')`, [client]);
+const u1 = await id(`insert into pipeline_entries (candidate_id, mandate_id) values ($1, $2)`, [C, Mu]);
+const u2 = await id(`insert into pipeline_entries (candidate_id, mandate_id) values ($1, $2)`, [D, Mu]);
+await q(`update pipeline_entries set stage = 'called' where id = $1`, [u2]);
+ok((await one(`select undo_pipeline_adds(array[$1, $2]::uuid[]) as n`, [u1, u2])).n === 1, 'undo removes only entries nothing has happened to');
+ok((await one(`select count(*)::int as n from pipeline_entries where mandate_id = $1`, [Mu])).n === 1, 'the moved entry stays');
+ok((await one(`select count(*)::int as n from activities where entity_id = $1`, [u1])).n === 0, 'its activity line goes too');
+await as(R2);
+const u3 = await id(`insert into pipeline_entries (candidate_id, mandate_id) values ($1, $2)`, [F, Mu]);
+await as(R1);
+ok((await one(`select undo_pipeline_adds(array[$1]::uuid[]) as n`, [u3])).n === 0, "cannot undo someone else's add");
+ok((await one(`select monthly_joining_target from settings`)).monthly_joining_target === 5, 'monthly target defaults to 5');
+await q(`update pipeline_entries set interview_at = now() + interval '2 days' where id = $1`, [u2]);
+ok((await one(`select interview_at is not null as x from pipeline_entries where id = $1`, [u2])).x, 'interview date stored on the entry');
+
 console.log('\nRow-level security');
 await db.exec(`set role authenticated`);
 await as(R2);

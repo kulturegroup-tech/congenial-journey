@@ -26,7 +26,7 @@ export function ClientForm({ values, firms, team }: { values: ClientValues; firm
     <form action={action} className="max-w-4xl space-y-5">
       {v.id ? <input type="hidden" name="id" value={v.id} /> : null}
       {state?.error ? (
-        <p className="rounded-lg bg-danger-soft px-3 py-2 text-[13px] text-danger">
+        <p className="rounded-2xl bg-danger-soft px-4 py-2.5 text-[13px] text-danger">
           {state.error}{" "}
           {state.id ? (
             <Link href={`/clients/${state.id}`} className="font-medium underline">
@@ -81,7 +81,7 @@ export function ClientForm({ values, firms, team }: { values: ClientValues; firm
       {!v.id ? (
         <Card className="space-y-4 p-5">
           <div>
-            <h3 className="font-semibold">Agreement terms</h3>
+            <h3 className="text-[15.5px] font-semibold">Agreement terms</h3>
             <p className="text-[13px] text-muted">
               From their signed letter: fees, cooling-off, CV validity, replacement and payment terms. Leave the fees blank if you don&apos;t have it yet and add it
               later from the client&apos;s page.

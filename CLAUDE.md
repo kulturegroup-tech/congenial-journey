@@ -7,9 +7,9 @@ The full spec is the "Paradigm Shifters — Recruitment Platform Build Spec" doc
 ## Stack
 
 - Next.js 16 (App Router, TypeScript) on Netlify (site `paradigm-shifters`), deployed from GitHub on every push to `main`. Netlify adds its Next.js runtime automatically; config is in `netlify.toml`
-- Supabase project `paradigm-shifters` (ref `fqsqfxshjedljagxytat`, Mumbai). Migrations 1–5 are applied live; 6 (invoice series per financial year) is written and tested but waiting to be applied. Apply new ones in order
+- Supabase project `paradigm-shifters` (ref `fqsqfxshjedljagxytat`, Mumbai). Migrations 1–5 are applied live; 6 (invoice series per financial year) and 7 (interview dates, monthly target, undo for suggestion adds) are written and tested but waiting to be applied. Apply new ones in order. The mandate page reads the board without `interview_at` until 7 is live
 - Supabase: Postgres, Auth (Google sign-in + email links), Storage (private buckets), cron + edge functions
-- Tailwind v4. Design tokens live in `app/globals.css`; shared UI in `components/ui.tsx`, so a design pass touches two files
+- Tailwind v4. Design tokens live in `app/globals.css`; shared UI in `components/ui.tsx` and `components/form.tsx`, so a design pass touches three files
 - Claude API for the agents in phase 3 (not before)
 
 Env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (browser-safe), `ALLOWED_EMAIL_DOMAINS`, `ALLOWED_EMAILS`. `SUPABASE_SERVICE_ROLE_KEY` is for import scripts only, never client code. See `.env.example`.
@@ -28,7 +28,8 @@ Env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (br
 - `lib/auth/member.ts`: `getSession()` (signed out / not on team / member) and `getTeamNames()`, cached per request
 - `lib/auth/allowed.ts`: who may sign in. Checked in `app/auth/callback/route.ts`
 - `lib/format.ts`: dates in India time, lakhs, rupees, phones, PQE
-- `app/(app)/layout.tsx`: sidebar, plus `TeamGate`, which shows setup, "not on team" or the page
+- `app/(app)/layout.tsx`: sidebar, plus `TeamGate`, which shows setup, "not on team" or the page, all inside `components/providers.tsx` (toasts, right-click menus, the ⌘K palette, the "Log a call" button)
+- `app/(app)/today`: the home screen. `app/(app)/calendar`: day, week and month views of calls, interviews, follow-ups, joinings and payments
 - `app/(app)/<section>/page.tsx`: one folder per nav item. Lookup is a Client Component calling `rpc('lookup')`
 
 ## The database is the source of truth for business rules
@@ -107,7 +108,7 @@ Build in this order. Each step should be usable on its own.
 - [x] Mandates: board from `v_mandate_board` (stale ones highlighted), mandate page with intake fields and a pipeline kanban; dragging into an exit asks for the reason
 - [x] CV share dialog: pick CV version and channels, show `check_duplicate` findings, block or ask for an override reason, then open WhatsApp (`wa.me` link) or email with the note filled in. Copy the TA team when the agreement says so
 - [x] Re-engagement: a "Past candidates who fit" panel on each mandate, plus notifications
-- [ ] Import (admin): load Odoo and sheet rows into `import_rows`, normalise, auto-merge on phone, email or LinkedIn, and send near-matches and unreadable PQE to a review list
+- [x] Import (admin): load Odoo and sheet rows into `import_rows`, normalise, auto-merge on phone, email or LinkedIn, and send near-matches and unreadable PQE to a review list
 
 Built ahead of phase 2: placements (from "Offer accepted" on a pipeline card, status updates on Billing), invoices via `create_invoice` with a printable tax invoice (browser print to PDF), payments, team management with PINs in Settings.
 
@@ -141,4 +142,11 @@ Phase 2 (still to do): invoice PDF stored in the `invoices` bucket, reminder ema
 - Desktop-first and dense: tables over cards, keyboard shortcuts, no page reloads for common actions.
 - Speed matters most on Lookup and the screening call form; those are used while on the phone.
 - Every list answers "who owns this and when did anything last happen".
-- Visual design is decided separately. Keep tokens (colours, type, spacing) in one place.
+- Plain words on screen: "Yet to speak", "Spoke", "Going quiet", "Drop", "Find someone". Stage keys in the database stay as they are; labels live in `lib/constants.ts`. The board groups the 12 stages into three phases: Talking to them, With the client, Closing.
+
+### Design system (Forest & sage)
+
+- Tokens in `app/globals.css`: forest `accent` #24453a on white `surface` and `canvas` #f4f6f3; tile tones `mist`, `clay`, `sand`, `sage`, `lilac`, `accent-soft`. Headings in Instrument Serif (`font-display`), everything else in the system sans.
+- Use the parts, don't restyle by hand: `PageHeader`, `Tile` (coloured block with a title), `Card`, `Table`, `Empty`, `Avatar`, `Badge` from `components/ui.tsx`; `Button` variants primary / secondary / outline / ghost / danger and the bottom-sheet `Dialog` from `components/form.tsx`.
+- Interaction rules: quiet hovers (the `.state` layer, never glows or gradients); actions on a row appear on hover in place of its secondary text (`.swap`); every person row has a right-click menu (`PersonRow`); anything reversible shows a toast with Undo (`useToast`) instead of a confirm dialog; ⌘K does both search and actions; confetti only when someone joins.
+- Motion uses `var(--ease-spring)` and respects reduced motion.

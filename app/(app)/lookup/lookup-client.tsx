@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ButtonLink } from "@/components/form";
+import { PersonRow } from "@/components/context-menu";
 import { stageLabel } from "@/lib/constants";
-import { Badge, Card, Empty, Table, TableSkeleton } from "@/components/ui";
+import { Search } from "lucide-react";
+import { Avatar, Badge, Empty, Table, TableSkeleton } from "@/components/ui";
 import { ago, formatDate, formatPhone, formatPqe } from "@/lib/format";
 
 type Hit = {
@@ -30,12 +32,21 @@ const matchLabel: Record<Hit["matched_on"], string> = {
   firm: "Works at",
 };
 
-type Pipe = { candidate_id: string; mandate_id: string; stage: string; label: string };
+type Pipe = {
+  candidate_id: string;
+  mandate_id: string;
+  stage: string;
+  label: string;
+};
 
 export function LookupClient() {
   const router = useRouter();
   const [q, setQ] = useState("");
-  const [result, setResult] = useState<{ q: string; hits: Hit[]; error?: string } | null>(null);
+  const [result, setResult] = useState<{
+    q: string;
+    hits: Hit[];
+    error?: string;
+  } | null>(null);
   const [pipes, setPipes] = useState<Record<string, Pipe[]>>({});
   const [team, setTeam] = useState<Record<string, string>>({});
 
@@ -48,9 +59,16 @@ export function LookupClient() {
     createClient()
       .from("team_members")
       .select("id, full_name")
-      .then(({ data }: { data: { id: string; full_name: string }[] | null }) => {
-        if (data) setTeam(Object.fromEntries(data.map((m) => [m.id, m.full_name.split(" ")[0]])));
-      });
+      .then(
+        ({ data }: { data: { id: string; full_name: string }[] | null }) => {
+          if (data)
+            setTeam(
+              Object.fromEntries(
+                data.map((m) => [m.id, m.full_name.split(" ")[0]]),
+              ),
+            );
+        },
+      );
   }, []);
 
   useEffect(() => {
@@ -63,21 +81,28 @@ export function LookupClient() {
       const hits = (data as Hit[]) ?? [];
       setResult({ q: term, hits, error: error?.message });
       // Open pipelines for the people found, so you see at once if someone is already working them.
-      const ids = hits.map((h) => h.candidate_id).filter((id) => !(id in pipes));
+      const ids = hits
+        .map((h) => h.candidate_id)
+        .filter((id) => !(id in pipes));
       if (!ids.length) return;
       const { data: rows } = await supabase
         .from("pipeline_entries")
-        .select("candidate_id, mandate_id, stage, mandates(title, clients(display_name))")
+        .select(
+          "candidate_id, mandate_id, stage, mandates(title, clients(display_name))",
+        )
         .in("candidate_id", ids)
         .is("exit_reason", null);
       if (cancelled) return;
-      const next: Record<string, Pipe[]> = Object.fromEntries(ids.map((id) => [id, []]));
+      const next: Record<string, Pipe[]> = Object.fromEntries(
+        ids.map((id) => [id, []]),
+      );
       for (const r of rows ?? []) {
         next[r.candidate_id].push({
           candidate_id: r.candidate_id,
           mandate_id: r.mandate_id,
           stage: r.stage,
-          label: `${r.mandates?.clients?.display_name ?? ""} ${r.mandates?.title ?? ""}`.trim(),
+          label:
+            `${r.mandates?.clients?.display_name ?? ""} ${r.mandates?.title ?? ""}`.trim(),
         });
       }
       setPipes((p) => ({ ...p, ...next }));
@@ -91,7 +116,8 @@ export function LookupClient() {
 
   return (
     <div className="space-y-5">
-      <Card className="p-2">
+      <div className="flex items-center gap-3 rounded-3xl bg-canvas px-5 transition-shadow focus-within:bg-surface focus-within:shadow-[0_0_0_1px_var(--color-line),0_18px_40px_-24px_rgb(29_42_36/0.5)]">
+        <Search size={20} className="text-muted" />
         <input
           id="lookup-input"
           autoFocus
@@ -99,50 +125,96 @@ export function LookupClient() {
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Escape") setQ("");
-            if (e.key === "Enter" && current?.hits[0]) router.push(`/candidates/${current.hits[0].candidate_id}`);
+            if (e.key === "Enter" && current?.hits[0])
+              router.push(`/candidates/${current.hits[0].candidate_id}`);
           }}
           placeholder="Paste a LinkedIn URL, phone number, email or name"
-          className="w-full rounded-lg px-4 py-3.5 text-[17px] outline-none placeholder:text-faint"
+          className="h-16 w-full bg-transparent text-[17px] outline-none placeholder:text-faint"
           autoComplete="off"
           spellCheck={false}
         />
-      </Card>
+      </div>
 
       {!active ? (
         <p className="text-muted">
-          Phone numbers work in any format: <span className="font-mono text-[13px]">98xxxxxx01</span>,{" "}
-          <span className="font-mono text-[13px]">+91 98xxx xxx01</span>, or two numbers separated by a comma.
+          Phone numbers work in any format:{" "}
+          <span className="font-medium text-ink">98xxxxxx01</span>,{" "}
+          <span className="font-medium text-ink">+91 98xxx xxx01</span>, or two
+          numbers separated by a comma.
         </p>
       ) : loading ? (
         <TableSkeleton rows={3} />
       ) : current?.error ? (
-        <Empty title="Lookup failed">{current.error}</Empty>
+        <Empty title="Search failed">{current.error}</Empty>
       ) : current && current.hits.length === 0 ? (
-        <Empty title="Not in our database">
-          <p>Safe to pull this number from Weekday. Add the candidate afterwards so nobody pulls it again.</p>
-          <div className="mt-4">
-            <ButtonLink href={`/candidates/new?q=${encodeURIComponent(term)}`} variant="primary">
-              Add as new candidate
+        <Empty
+          title="Not in our database"
+          action={
+            <ButtonLink
+              href={`/candidates/new?q=${encodeURIComponent(term)}`}
+              variant="primary"
+            >
+              Add as a new candidate
             </ButtonLink>
-          </div>
+          }
+        >
+          Safe to pull this number from Weekday. Add them afterwards so nobody
+          pulls it again.
         </Empty>
       ) : current ? (
-        <Table head={["Candidate", "Firm", "PQE", "Phone", "Email", "Last call", "On mandates"]}>
+        <Table
+          head={[
+            "Candidate",
+            "Firm",
+            "PQE",
+            "Phone",
+            "Email",
+            "Last call",
+            "On mandates",
+          ]}
+        >
           {current.hits.map((h) => (
-            <tr key={h.candidate_id}>
+            <PersonRow
+              as="tr"
+              key={h.candidate_id}
+              person={{
+                id: h.candidate_id,
+                name: h.full_name,
+                phone: h.phones[0],
+              }}
+            >
               <td>
-                <Link href={`/candidates/${h.candidate_id}`} className="font-medium hover:text-accent">
-                  {h.full_name}
-                </Link>
-                <div className="mt-1 flex items-center gap-2">
-                  <Badge tone={h.matched_on === "name" || h.matched_on === "firm" ? "neutral" : "ok"}>
-                    {matchLabel[h.matched_on]}
-                  </Badge>
-                  {h.linkedin_url ? (
-                    <a href={h.linkedin_url} target="_blank" rel="noreferrer" className="text-[12px] text-accent hover:underline">
-                      LinkedIn ↗
-                    </a>
-                  ) : null}
+                <div className="flex items-center gap-3">
+                  <Avatar name={h.full_name} size={34} />
+                  <div>
+                    <Link
+                      href={`/candidates/${h.candidate_id}`}
+                      className="font-semibold hover:text-accent"
+                    >
+                      {h.full_name}
+                    </Link>
+                    <div className="mt-1 flex items-center gap-2">
+                      <Badge
+                        tone={
+                          h.matched_on === "name" || h.matched_on === "firm"
+                            ? "neutral"
+                            : "ok"
+                        }
+                      >
+                        {matchLabel[h.matched_on]}
+                      </Badge>
+                      {h.linkedin_url ? (
+                        <a
+                          href={h.linkedin_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[12px] text-accent hover:underline"
+                        >
+                          LinkedIn
+                        </a>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
               </td>
               <td>{h.current_firm ?? <span className="text-faint">—</span>}</td>
@@ -151,7 +223,10 @@ export function LookupClient() {
                 {h.phones.length ? (
                   h.phones.map((p) => (
                     <div key={p}>
-                      <a href={`tel:${p}`} className="font-mono text-[13px] hover:text-accent">
+                      <a
+                        href={`tel:${p}`}
+                        className="text-[13px] tabular-nums hover:text-accent"
+                      >
                         {formatPhone(p)}
                       </a>
                     </div>
@@ -160,12 +235,19 @@ export function LookupClient() {
                   <span className="text-faint">No number yet</span>
                 )}
               </td>
-              <td className="max-w-56 truncate">{h.emails[0] ?? <span className="text-faint">—</span>}</td>
+              <td className="max-w-56 truncate">
+                {h.emails[0] ?? <span className="text-faint">—</span>}
+              </td>
               <td className="whitespace-nowrap">
                 {h.last_called_at ? (
                   <>
-                    <div>{team[h.last_called_by ?? ""] ?? "Someone"}, {ago(h.last_called_at)}</div>
-                    <div className="text-[12px] text-muted">{formatDate(h.last_called_at)}</div>
+                    <div>
+                      {team[h.last_called_by ?? ""] ?? "Someone"},{" "}
+                      {ago(h.last_called_at)}
+                    </div>
+                    <div className="text-[12px] text-muted">
+                      {formatDate(h.last_called_at)}
+                    </div>
                   </>
                 ) : (
                   <span className="text-faint">Never called</span>
@@ -177,17 +259,22 @@ export function LookupClient() {
                 ) : pipes[h.candidate_id].length ? (
                   pipes[h.candidate_id].map((p) => (
                     <div key={p.mandate_id}>
-                      <Link href={`/mandates/${p.mandate_id}`} className="hover:text-accent">
+                      <Link
+                        href={`/mandates/${p.mandate_id}`}
+                        className="hover:text-accent"
+                      >
                         {p.label}
                       </Link>{" "}
-                      <span className="text-muted">· {stageLabel(p.stage)}</span>
+                      <span className="text-muted">
+                        · {stageLabel(p.stage)}
+                      </span>
                     </div>
                   ))
                 ) : (
                   <span className="text-faint">None open</span>
                 )}
               </td>
-            </tr>
+            </PersonRow>
           ))}
         </Table>
       ) : null}

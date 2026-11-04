@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { Badge, Card, Page, TableSkeleton } from "@/components/ui";
+import { Badge, Card, Page, PageHeader, TableSkeleton } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getSession, getTeamNames } from "@/lib/auth/member";
 import { formatDate, formatMoney, rupeesInWords } from "@/lib/format";
@@ -14,7 +13,7 @@ type Params = Promise<{ id: string }>;
 
 export default function InvoicePage({ params }: { params: Params }) {
   return (
-    <Suspense fallback={<div className="p-8"><TableSkeleton /></div>}>
+    <Suspense fallback={<div className="px-10 pt-24"><TableSkeleton /></div>}>
       <Invoice params={params} />
     </Suspense>
   );
@@ -45,23 +44,24 @@ async function Invoice({ params }: { params: Params }) {
 
   return (
     <>
-      <header className="no-print border-b border-line bg-surface px-8 pb-5 pt-6">
-        <Link href="/billing" className="text-[13px] text-muted hover:text-ink">
-          ← Billing
-        </Link>
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-[22px] font-semibold tracking-tight">
-            Invoice {inv.invoice_number} <Badge tone={inv.status === "paid" ? "ok" : inv.status === "cancelled" ? "neutral" : "accent"}>{inv.status.replace("_", " ")}</Badge>
-          </h1>
-          <InvoiceActions id={inv.id} status={inv.status} isAdmin={isAdmin} />
-        </div>
-        <p className="mt-1 text-[13px] text-muted">
-          {inv.sent_at ? `Sent ${formatDate(inv.sent_at)}${inv.sent_by ? ` by ${team[inv.sent_by] ?? ""}` : ""} · ` : "Draft: print it, send it, then mark it as sent. · "}
-          Due {formatDate(inv.due_on)}
-          {inv.raise_by ? ` · agreement deadline to raise: ${formatDate(inv.raise_by)}` : ""}
-          {paid ? ` · received ${formatMoney(paid)} of ${formatMoney(inv.total)}` : ""}
-        </p>
-      </header>
+      <div className="no-print">
+        <PageHeader
+          title={`Invoice ${inv.invoice_number}`}
+          back={{ href: "/billing", label: "Billing" }}
+          description={
+            <>
+              <Badge tone={inv.status === "paid" ? "ok" : inv.status === "cancelled" ? "neutral" : inv.status === "draft" ? "warn" : "accent"} className="mr-2">
+                {inv.status.replace("_", " ")}
+              </Badge>
+              {inv.sent_at ? `Sent ${formatDate(inv.sent_at)}${inv.sent_by ? ` by ${team[inv.sent_by] ?? ""}` : ""}. ` : "Draft: print it, send it, then mark it as sent. "}
+              Due {formatDate(inv.due_on)}.
+              {inv.raise_by ? ` Agreement deadline to raise it: ${formatDate(inv.raise_by)}.` : ""}
+              {paid ? ` Received ${formatMoney(paid)} of ${formatMoney(inv.total)}.` : ""}
+            </>
+          }
+          actions={<InvoiceActions id={inv.id} status={inv.status} isAdmin={isAdmin} />}
+        />
+      </div>
 
       <Page>
         <div className="print-sheet mx-auto max-w-[800px] rounded-xl border border-line bg-white p-10 text-[13px] text-black">
@@ -163,7 +163,7 @@ async function Invoice({ params }: { params: Params }) {
 
         {inv.payments.length ? (
           <Card className="no-print mx-auto mt-6 max-w-[800px] p-4">
-            <h3 className="mb-2 font-semibold">Payments</h3>
+            <h3 className="mb-2.5 text-[15.5px] font-semibold">Payments</h3>
             <ul className="divide-y divide-line text-[13px]">
               {inv.payments.map((x) => (
                 <li key={x.id} className="flex justify-between py-1.5">

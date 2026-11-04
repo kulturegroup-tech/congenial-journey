@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ButtonLink } from "@/components/form";
-import { Badge, Card, Empty, Page, Table, TableSkeleton } from "@/components/ui";
+import { Badge, Card, Empty, Page, PageHeader, Table, TableSkeleton } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getTeamNames } from "@/lib/auth/member";
 import { ago, formatDate, formatPqeRange } from "@/lib/format";
@@ -15,7 +15,7 @@ type Params = Promise<{ id: string }>;
 
 export default function ClientPage({ params }: { params: Params }) {
   return (
-    <Suspense fallback={<div className="p-8"><TableSkeleton /></div>}>
+    <Suspense fallback={<div className="px-10 pt-24"><TableSkeleton /></div>}>
       <ClientScreen params={params} />
     </Suspense>
   );
@@ -45,27 +45,23 @@ async function ClientScreen({ params }: { params: Params }) {
 
   return (
     <>
-      <header className="border-b border-line bg-surface px-8 pb-5 pt-6">
-        <Link href="/clients" className="text-[13px] text-muted hover:text-ink">
-          ← Clients
-        </Link>
-        <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-[22px] font-semibold tracking-tight">{c.display_name}</h1>
-            <p className="mt-1 text-muted">
-              {[c.firms?.name !== c.display_name ? c.firms?.name : null, c.firms?.kind === "company" ? "In-house" : "Law firm", c.owner_id ? `owner ${team[c.owner_id] ?? "—"}` : null]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-          </div>
-          <div className="flex gap-2">
+      <PageHeader
+        title={c.display_name}
+        back={{ href: "/clients", label: "Clients" }}
+        description={[c.firms?.name !== c.display_name ? c.firms?.name : null, c.firms?.kind === "company" ? "In-house team" : "Law firm", c.owner_id ? `${team[c.owner_id] ?? "Someone"} looks after them` : null]
+          .filter(Boolean)
+          .join(" · ")}
+        actions={
+          <>
             <ButtonLink href={`/mandates/new?client=${id}`} variant="primary">
               New mandate
             </ButtonLink>
-            <ButtonLink href={`/clients/${id}/edit`}>Edit</ButtonLink>
-          </div>
-        </div>
-      </header>
+            <ButtonLink href={`/clients/${id}/edit`} variant="ghost">
+              Edit
+            </ButtonLink>
+          </>
+        }
+      />
 
       <Page>
         <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
@@ -155,7 +151,7 @@ async function ClientScreen({ params }: { params: Params }) {
             </section>
 
             <section>
-              <h2 className="mb-2 font-semibold">Mandates</h2>
+              <h2 className="mb-2.5 text-[16.5px] font-semibold">Mandates</h2>
               {mandates.data?.length ? (
                 <Table head={["Mandate", "PQE", "Owner", "Status", "Shared", "Last activity"]}>
                   {mandates.data.map((m) => (
@@ -184,7 +180,7 @@ async function ClientScreen({ params }: { params: Params }) {
             </section>
 
             <section>
-              <h2 className="mb-1 font-semibold">CVs still ours here</h2>
+              <h2 className="mb-1.5 text-[16.5px] font-semibold">CVs still ours here</h2>
               <p className="mb-2 text-[12px] text-muted">If they hire any of these people before the date, the fee is due.</p>
               {live.data?.length ? (
                 <Card className="divide-y divide-line text-[13px]">
@@ -211,7 +207,7 @@ async function ClientScreen({ params }: { params: Params }) {
           <aside className="space-y-4">
             <Card className="p-4">
               <div className="mb-2 flex items-center justify-between">
-                <h3 className="font-semibold">Contacts</h3>
+                <h3 className="text-[15.5px] font-semibold">Contacts</h3>
                 <ContactDialog clientId={id} />
               </div>
               {contacts.data?.length ? (
@@ -232,7 +228,7 @@ async function ClientScreen({ params }: { params: Params }) {
                           {p.email}
                         </a>
                       ) : null}
-                      {p.phone ? <span className="block font-mono text-[12px] text-muted">{p.phone}</span> : null}
+                      {p.phone ? <span className="block text-[12.5px] tabular-nums text-muted">{p.phone}</span> : null}
                       {p.copy_on_shares ? <Badge tone="accent">Copied on CV shares</Badge> : null}
                     </li>
                   ))}
@@ -243,7 +239,7 @@ async function ClientScreen({ params }: { params: Params }) {
             </Card>
 
             <Card className="p-4">
-              <h3 className="mb-2 font-semibold">Billing</h3>
+              <h3 className="mb-2.5 text-[15.5px] font-semibold">Billing</h3>
               <dl className="grid grid-cols-[90px_1fr] gap-y-1.5 text-[13px]">
                 <dt className="text-muted">Name</dt>
                 <dd>{c.billing_name ?? "—"}</dd>

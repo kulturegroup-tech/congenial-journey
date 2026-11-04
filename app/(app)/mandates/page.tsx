@@ -51,7 +51,7 @@ export default function MandatesPage({ searchParams }: { searchParams: SP }) {
     <>
       <PageHeader
         title="Mandates"
-        description="Every open mandate with its owner and last activity. Stale ones rise to the top."
+        description="Every open mandate, who owns it and when there was last news. Quiet ones rise to the top."
         actions={
           <ButtonLink href="/mandates/new" variant="primary">
             New mandate
@@ -81,12 +81,12 @@ async function MandateBoard({ searchParams }: { searchParams: SP }) {
     getTeamNames(),
   ]);
   const tabBar = (
-    <div className="mb-4 flex gap-1 text-[13px]">
+    <div className="mb-5 inline-flex rounded-full bg-side p-1 text-[13px]">
       {tabs.map(([v, l]) => (
         <Link
           key={v}
           href={v === "open" ? "/mandates" : `/mandates?tab=${v}`}
-          className={`rounded-lg px-3 py-1.5 ${tab === v ? "bg-accent-soft font-medium text-accent" : "text-muted hover:bg-surface"}`}
+          className={`rounded-full px-4 py-1.5 font-medium transition-colors ${tab === v ? "bg-surface text-ink shadow-[0_4px_12px_-8px_rgb(29_42_36/0.5)]" : "text-muted hover:text-ink"}`}
         >
           {l}
         </Link>
@@ -161,7 +161,7 @@ async function MandateBoard({ searchParams }: { searchParams: SP }) {
             <td className="whitespace-nowrap">
               {ago(m.last_activity_at)}
               <div className="mt-1 flex gap-1.5">
-                {m.is_stale ? <Badge tone="warn">Stale</Badge> : null}
+                {m.is_stale ? <Badge tone="warn">Quiet</Badge> : null}
                 {m.status === "on_hold" ? <Badge>On hold</Badge> : null}
                 {m.status === "filled" ? <Badge tone="ok">Filled</Badge> : null}
                 {m.status === "lost" ? <Badge>Lost</Badge> : null}

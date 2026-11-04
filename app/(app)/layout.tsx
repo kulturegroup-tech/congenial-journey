@@ -1,11 +1,12 @@
 import { Suspense, type ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/sidebar";
+import { Providers } from "@/components/providers";
 import { BellMenu } from "@/components/bell";
 import { createClient } from "@/lib/supabase/server";
 import { SignOutButton } from "@/components/sign-out-button";
 import { NotOnTeam, SetupNotice } from "@/components/notices";
-import { TableSkeleton } from "@/components/ui";
+import { Avatar, TableSkeleton } from "@/components/ui";
 import { getSession } from "@/lib/auth/member";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
@@ -13,25 +14,33 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 // streams in behind a Suspense boundary, as Cache Components requires.
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen">
-      <Sidebar
-        top={
-          <Suspense fallback={null}>
-            <Bell />
+    <Providers>
+      <div className="flex min-h-screen">
+        <Sidebar
+          top={
+            <Suspense fallback={null}>
+              <Bell />
+            </Suspense>
+          }
+          footer={
+            <Suspense fallback={<div className="h-9" />}>
+              <UserMenu />
+            </Suspense>
+          }
+        />
+        <main className="min-w-0 flex-1">
+          <Suspense
+            fallback={
+              <div className="px-10 pt-24">
+                <TableSkeleton />
+              </div>
+            }
+          >
+            <TeamGate>{children}</TeamGate>
           </Suspense>
-        }
-        footer={
-          <Suspense fallback={<div className="h-9" />}>
-            <UserMenu />
-          </Suspense>
-        }
-      />
-      <main className="min-w-0 flex-1">
-        <Suspense fallback={<div className="p-8"><TableSkeleton /></div>}>
-          <TeamGate>{children}</TeamGate>
-        </Suspense>
-      </main>
-    </div>
+        </main>
+      </div>
+    </Providers>
   );
 }
 
@@ -39,7 +48,8 @@ async function TeamGate({ children }: { children: ReactNode }) {
   if (!isSupabaseConfigured) return <SetupNotice />;
   const session = await getSession();
   if (session.state === "signed_out") redirect("/login");
-  if (session.state === "not_on_team") return <NotOnTeam email={session.email} />;
+  if (session.state === "not_on_team")
+    return <NotOnTeam email={session.email} />;
   return <>{children}</>;
 }
 
@@ -49,9 +59,14 @@ async function UserMenu() {
   if (session.state !== "member") return <SignOutButton />;
   return (
     <div className="flex items-center justify-between gap-2">
-      <div className="min-w-0">
-        <p className="truncate font-medium">{session.member.full_name}</p>
-        <p className="text-[12px] text-muted">{session.member.is_admin ? "Admin" : "Recruiter"}</p>
+      <div className="flex min-w-0 items-center gap-2.5">
+        <Avatar name={session.member.full_name} size={32} />
+        <div className="min-w-0">
+          <p className="truncate font-medium">{session.member.full_name}</p>
+          <p className="text-[12px] text-muted">
+            {session.member.is_admin ? "Admin" : "Recruiter"}
+          </p>
+        </div>
       </div>
       <SignOutButton />
     </div>
@@ -70,7 +85,11 @@ async function Bell() {
       .eq("recipient_id", session.member.id)
       .order("created_at", { ascending: false })
       .limit(12),
-    supabase.from("notifications").select("id", { count: "exact", head: true }).eq("recipient_id", session.member.id).is("read_at", null),
+    supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("recipient_id", session.member.id)
+      .is("read_at", null),
   ]);
   return <BellMenu notes={data ?? []} unread={count ?? 0} />;
 }

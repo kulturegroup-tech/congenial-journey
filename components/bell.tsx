@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { markAllRead, markRead } from "@/lib/actions/notifications";
+import { Bell } from "lucide-react";
 import { ago } from "@/lib/format";
 
 export type Note = { id: string; title: string; body: string | null; mandate_id: string | null; candidate_id: string | null; read_at: string | null; created_at: string };
@@ -25,22 +26,19 @@ export function BellMenu({ notes, unread }: { notes: Note[]; unread: number }) {
         type="button"
         onClick={() => setOpen(!open)}
         aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`}
-        className="relative rounded-lg p-1.5 text-muted hover:bg-canvas hover:text-ink"
+        className="state relative grid h-8 w-8 place-items-center rounded-full text-muted hover:text-ink"
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-        </svg>
+        <Bell size={18} strokeWidth={1.8} />
         {unread ? (
-          <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-danger px-1 text-center text-[10px] font-semibold leading-4 text-white">
+          <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-accent px-1 text-center text-[10px] font-semibold leading-4 text-white">
             {unread > 9 ? "9+" : unread}
           </span>
         ) : null}
       </button>
       {open ? (
-        <div className="absolute left-0 top-9 z-50 w-80 rounded-xl border border-line bg-surface shadow-xl">
-          <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
-            <span className="font-semibold">Re-engagement alerts</span>
+        <div className="pop absolute left-0 top-10 z-50 w-[340px] origin-top-left overflow-hidden rounded-3xl bg-surface shadow-[0_0_0_1px_var(--color-line),0_24px_48px_-20px_rgb(29_42_36/0.4)]">
+          <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
+            <span className="font-semibold">Suggestions for you</span>
             {unread ? (
               <button type="button" onClick={() => start(() => markAllRead())} className="text-[12px] text-accent hover:underline">
                 Mark all read
@@ -57,7 +55,7 @@ export function BellMenu({ notes, unread }: { notes: Note[]; unread: number }) {
                       setOpen(false);
                       if (!n.read_at) start(() => markRead(n.id));
                     }}
-                    className="block px-4 py-2.5 hover:bg-canvas"
+                    className="block px-5 py-3 transition-colors hover:bg-canvas"
                   >
                     <p className="text-[13px] font-medium leading-snug">{n.title}</p>
                     {n.body ? <p className="mt-0.5 text-[12px] text-muted">{n.body}</p> : null}
@@ -67,7 +65,7 @@ export function BellMenu({ notes, unread }: { notes: Note[]; unread: number }) {
               ))}
             </ul>
           ) : (
-            <p className="px-4 py-6 text-center text-[13px] text-muted">Nothing yet. When a mandate opens, past candidates who fit show up here.</p>
+            <p className="px-4 py-6 text-center text-[13px] text-muted">Nothing yet. When a mandate opens, people you&apos;ve spoken to who fit it show up here.</p>
           )}
           <Link href="/reminders" onClick={() => setOpen(false)} className="block border-t border-line px-4 py-2 text-center text-[12px] text-accent hover:underline">
             All reminders

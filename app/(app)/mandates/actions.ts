@@ -101,18 +101,19 @@ export async function reopenEntry(entryId: string) {
   return { ok: true };
 }
 
-/** Put past candidates on this mandate (from the “Past candidates who fit” panel). */
-export async function addCandidates(mandateId: string, candidateIds: string[]) {
+/** Put past candidates on this mandate (from the suggestions). Returns the new entries so the add can be undone. */
+export async function addCandidates(mandateId: string, candidateIds: string[]): Promise<{ ok?: boolean; error?: string; added?: string[] }> {
   const { supabase, userId } = await me();
-  if (!candidateIds.length) return { error: "Tick at least one candidate." };
-  const { error } = await supabase
+  if (!candidateIds.length) return { error: "Pick at least one person." };
+  const { data, error } = await supabase
     .from("pipeline_entries")
     .upsert(
       candidateIds.map((c) => ({ candidate_id: c, mandate_id: mandateId, stage: "mapped" as const })),
       { onConflict: "candidate_id,mandate_id", ignoreDuplicates: true },
-    );
+    )
+    .select("id");
   if (error) return { error: dbError(error) };
-  // Their re-engagement alerts for this mandate are now handled.
+  // Their suggestions for this mandate are now handled.
   if (userId) {
     await supabase
       .from("notifications")
@@ -121,6 +122,39 @@ export async function addCandidates(mandateId: string, candidateIds: string[]) {
       .in("candidate_id", candidateIds)
       .is("read_at", null);
   }
+  refresh();
+  return { ok: true, added: (data ?? []).map((r) => r.id) };
+}
+
+/** Undo a bulk add, if nothing has happened to those entries yet. */
+export async function undoAdds(entryIds: string[]) {
+  const { supabase } = await me();
+  const { data, error } = await supabase.rpc("undo_pipeline_adds", { p_ids: entryIds });
+  if (error) return { error: dbError(error) };
+  refresh();
+  return { ok: true, removed: data ?? 0 };
+}
+
+/** "Not now" on a suggestion: hides it for me. */
+export async function dismissSuggestions(mandateId: string, candidateIds?: string[]) {
+  const { supabase, userId } = await me();
+  if (!userId) return { error: "Not signed in." };
+  let q = supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("recipient_id", userId).eq("mandate_id", mandateId).is("read_at", null);
+  if (candidateIds?.length) q = q.in("candidate_id", candidateIds);
+  const { error } = await q;
+  if (error) return { error: dbError(error) };
+  refresh();
+  return { ok: true };
+}
+
+/** When the interview, assignment or final round is (shows on the calendar). */
+export async function setInterviewAt(entryId: string, when: string | null) {
+  const { supabase } = await me();
+  const { error } = await supabase
+    .from("pipeline_entries")
+    .update({ interview_at: when ? new Date(`${when}:00+05:30`).toISOString() : null })
+    .eq("id", entryId);
+  if (error) return { error: dbError(error) };
   refresh();
   return { ok: true };
 }

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ButtonLink } from "@/components/form";
-import { Badge, Card, Page, TableSkeleton } from "@/components/ui";
+import { Badge, Card, Page, PageHeader, TableSkeleton, Tile } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getTeamNames } from "@/lib/auth/member";
 import { getExitReasons } from "@/lib/data/options";
@@ -18,7 +18,7 @@ type Params = Promise<{ id: string }>;
 
 export default function MandatePage({ params }: { params: Params }) {
   return (
-    <Suspense fallback={<div className="p-8"><TableSkeleton /></div>}>
+    <Suspense fallback={<div className="px-10 pt-24"><TableSkeleton /></div>}>
       <MandateScreen params={params} />
     </Suspense>
   );
@@ -27,12 +27,12 @@ export default function MandatePage({ params }: { params: Params }) {
 async function MandateScreen({ params }: { params: Params }) {
   const { id } = await params;
   const supabase = await createClient();
-  const [mq, bq, eq, sq, pq, matchq, aq, team, reasons] = await Promise.all([
+  const [mq, bq, eqFull, sq, pq, matchq, aq, team, reasons] = await Promise.all([
     supabase.from("mandates").select("*, clients(id, display_name)").eq("id", id).maybeSingle(),
     supabase.from("v_mandate_board").select("in_play, cvs_shared, interviewed, joined, is_stale, days_open").eq("id", id).maybeSingle(),
     supabase
       .from("pipeline_entries")
-      .select("id, candidate_id, stage, stage_changed_at, exit_reason, exit_note, follow_up_on, owner_id, exit_reasons(label)")
+      .select("id, candidate_id, stage, stage_changed_at, exit_reason, exit_note, follow_up_on, interview_at, owner_id, exit_reasons(label)")
       .eq("mandate_id", id)
       .order("stage_changed_at", { ascending: false }),
     supabase.from("cv_shares").select("id, pipeline_entry_id, candidate_id, shared_at, valid_until, channels, override_reason, shared_by").eq("mandate_id", id).order("shared_at", { ascending: false }),
@@ -42,6 +42,15 @@ async function MandateScreen({ params }: { params: Params }) {
     getTeamNames(),
     getExitReasons(),
   ]);
+  // Until migration 7 (interview dates) is applied, read the board without them rather than show it empty.
+  const eq = eqFull.error
+    ? await supabase
+        .from("pipeline_entries")
+        .select("id, candidate_id, stage, stage_changed_at, exit_reason, exit_note, follow_up_on, owner_id, exit_reasons(label)")
+        .eq("mandate_id", id)
+        .order("stage_changed_at", { ascending: false })
+        .then((r) => ({ ...r, data: r.data?.map((e) => ({ ...e, interview_at: null as string | null })) ?? null }))
+    : eqFull;
   const m = mq.data;
   if (!m) notFound();
   const b = bq.data;
@@ -69,6 +78,7 @@ async function MandateScreen({ params }: { params: Params }) {
       exit_label: e.exit_reasons?.label ?? null,
       exit_note: e.exit_note,
       follow_up_on: e.follow_up_on,
+      interview_at: e.interview_at,
       owner: e.owner_id ? team[e.owner_id] ?? "" : "",
       has_share: shared.has(e.id),
       placement: placed.get(e.id) ?? null,
@@ -97,66 +107,55 @@ async function MandateScreen({ params }: { params: Params }) {
 
   return (
     <>
-      <header className="border-b border-line bg-surface px-8 pb-5 pt-6">
-        <Link href="/mandates" className="text-[13px] text-muted hover:text-ink">
-          ← Mandates
-        </Link>
-        <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-[22px] font-semibold tracking-tight">
-              <Link href={`/clients/${m.clients?.id}`} className="hover:text-accent">
-                {m.clients?.display_name}
-              </Link>{" "}
-              · {m.title}
-            </h1>
-            <p className="mt-1 text-muted">
-              {[m.city, m.practice_area, formatPqeRange(m.pqe_min, m.pqe_max, m.grade_label), m.role_category === "support_staff" ? "Support staff" : null, m.headcount > 1 ? `${m.headcount} openings` : null]
-                .filter((x) => x && x !== "—")
-                .join(" · ")}
-            </p>
-            <p className="mt-1 text-[13px] text-muted">
-              Owner <b className="text-ink">{m.owner_id ? team[m.owner_id] ?? "—" : "unassigned"}</b> · received {formatDate(m.received_on)}
-              {b ? ` (${b.days_open} days)` : ""} · last activity {ago(m.last_activity_at)}
-              {b?.is_stale ? (
-                <>
-                  {" "}
-                  <Badge tone="warn">Stale</Badge>
-                </>
-              ) : null}
-              {m.replaces_placement_id ? (
-                <>
-                  {" "}
-                  <Badge tone="accent">Replacement, no fee</Badge>
-                </>
-              ) : null}
-              {m.reopened_count > 0 ? <span> · reopened {m.reopened_count}×</span> : null}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+      <PageHeader
+        title={`${m.clients?.display_name ?? ""}, ${m.title}`}
+        back={{ href: "/mandates", label: "Mandates" }}
+        description={
+          <>
+            {[m.city, m.practice_area, formatPqeRange(m.pqe_min, m.pqe_max, m.grade_label), m.role_category === "support_staff" ? "Support staff" : null, m.headcount > 1 ? `${m.headcount} openings` : null]
+              .filter((x) => x && x !== "—")
+              .join(" · ")}
+            <span className="mt-1 block text-[13.5px]">
+              {m.owner_id ? `${team[m.owner_id] ?? "Someone"}'s mandate` : "No owner yet"}, received {formatDate(m.received_on)}
+              {b ? ` (${b.days_open} days ago)` : ""}. Last news {ago(m.last_activity_at)}.
+              {m.reopened_count > 0 ? ` Reopened ${m.reopened_count}×.` : ""}
+            </span>
+          </>
+        }
+        actions={
+          <>
             <AddCandidate mandateId={id} />
             <ButtonLink href={`/mandates/${id}/edit`}>Edit</ButtonLink>
+          </>
+        }
+      >
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <StatusControl id={id} status={m.status} />
+            {b?.is_stale ? <Badge tone="warn">Quiet for a while</Badge> : null}
+            {m.replaces_placement_id ? <Badge tone="accent">Replacement, no fee</Badge> : null}
+            <Link href={`/clients/${m.clients?.id}`} className="text-[13px] font-medium text-muted underline decoration-line underline-offset-2 hover:text-ink">
+              {m.clients?.display_name} agreement and contacts
+            </Link>
           </div>
-        </div>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <StatusControl id={id} status={m.status} />
           {b ? (
-            <div className="flex gap-5 text-[13px] text-muted">
+            <div className="flex gap-6 text-[13px] text-muted">
               <span>
-                <b className="text-ink tabular-nums">{b.in_play}</b> in play
+                <b className="text-[18px] font-semibold tabular-nums text-ink">{b.in_play}</b> in play
               </span>
               <span>
-                <b className="text-ink tabular-nums">{b.cvs_shared}</b> CVs shared
+                <b className="text-[18px] font-semibold tabular-nums text-ink">{b.cvs_shared}</b> CVs shared
               </span>
               <span>
-                <b className="text-ink tabular-nums">{b.interviewed}</b> interviewed
+                <b className="text-[18px] font-semibold tabular-nums text-ink">{b.interviewed}</b> interviewed
               </span>
               <span>
-                <b className="text-ink tabular-nums">{b.joined}</b> joined
+                <b className="text-[18px] font-semibold tabular-nums text-ink">{b.joined}</b> joined
               </span>
             </div>
           ) : null}
         </div>
-      </header>
+      </PageHeader>
 
       <Page>
         <Board entries={entries} exitReasons={reasons} />
@@ -164,7 +163,7 @@ async function MandateScreen({ params }: { params: Params }) {
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_380px]">
           <div className="min-w-0 space-y-6">
             <section>
-              <h2 className="mb-2 font-semibold">CVs shared</h2>
+              <h2 className="mb-2.5 text-[16.5px] font-semibold">CVs shared</h2>
               {sq.data?.length ? (
                 <Card className="divide-y divide-line text-[13px]">
                   {sq.data.map((s) => (
@@ -190,7 +189,7 @@ async function MandateScreen({ params }: { params: Params }) {
             </section>
 
             <section>
-              <h2 className="mb-2 font-semibold">Intake</h2>
+              <h2 className="mb-2.5 text-[16.5px] font-semibold">Intake</h2>
               {intake.some(([, v]) => v) ? (
                 <Card className="p-4">
                   <dl className="grid gap-x-4 gap-y-2 text-[13px] md:grid-cols-[150px_1fr]">
@@ -212,7 +211,7 @@ async function MandateScreen({ params }: { params: Params }) {
             </section>
 
             <section>
-              <h2 className="mb-2 font-semibold">Activity</h2>
+              <h2 className="mb-2.5 text-[16.5px] font-semibold">Activity</h2>
               {aq.data?.length ? (
                 <Card className="divide-y divide-line text-[13px]">
                   {aq.data.map((a) => {
@@ -222,7 +221,7 @@ async function MandateScreen({ params }: { params: Params }) {
                       a.action === "stage_changed"
                         ? `${who} → ${stageLabel(d.to)}`
                         : a.action === "exited"
-                          ? `${who} out: ${d.reason?.replace(/_/g, " ")}`
+                          ? `${who} dropped: ${d.reason?.replace(/_/g, " ")}`
                           : a.action === "reopened"
                             ? `${who} back in play`
                             : a.entity_type === "cv_shares"
@@ -256,11 +255,10 @@ async function MandateScreen({ params }: { params: Params }) {
           </div>
 
           <aside>
-            <Card className="p-4">
-              <h3 className="font-semibold">Past candidates who fit</h3>
-              <p className="mb-2 text-[12px] text-muted">From interest tags, practice area, PQE today and city. Best fits first.</p>
+            <Tile tone="sage" title="Suggested for this mandate">
+              <p className="-mt-1 mb-3 text-[12.5px] text-ink/65">People you&apos;ve spoken to before, matched on the firms they asked for, practice, experience today and city. Best fits first.</p>
               <Matches mandateId={id} matches={matches} />
-            </Card>
+            </Tile>
           </aside>
         </div>
       </Page>
