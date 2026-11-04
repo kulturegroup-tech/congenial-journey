@@ -107,7 +107,10 @@ async function Billing() {
                       {p.clients?.display_name} · {p.mandates?.title}
                     </Link>
                   </td>
-                  <td className="whitespace-nowrap tabular-nums">{formatLakhs(p.annual_fixed_salary)}</td>
+                  <td className="whitespace-nowrap tabular-nums">
+                    {formatRupees(Math.round(p.annual_fixed_salary / 12))}/mo
+                    <div className="text-[12px] text-muted">{formatLakhs(p.annual_fixed_salary)} a year</div>
+                  </td>
                   <td className="whitespace-nowrap tabular-nums">
                     {p.fee_percent != null ? `${+p.fee_percent}% · ${formatRupees(p.fee_amount)}` : <span className="text-warn">No fee %: check the agreement</span>}
                     {p.mandates?.replaces_placement_id ? <div className="text-[12px] text-muted">Replacement, no fee</div> : null}

@@ -1640,6 +1640,7 @@ export type Database = {
           gstin: string | null
           home_state_code: string
           id: boolean
+          invoice_fy: string | null
           invoice_prefix: string
           next_invoice_serial: number
           sac_code: string
@@ -1656,6 +1657,7 @@ export type Database = {
           gstin?: string | null
           home_state_code?: string
           id?: boolean
+          invoice_fy?: string | null
           invoice_prefix?: string
           next_invoice_serial?: number
           sac_code?: string
@@ -1672,6 +1674,7 @@ export type Database = {
           gstin?: string | null
           home_state_code?: string
           id?: boolean
+          invoice_fy?: string | null
           invoice_prefix?: string
           next_invoice_serial?: number
           sac_code?: string
@@ -1909,6 +1912,7 @@ export type Database = {
           seen_on: string
         }[]
       }
+      financial_year: { Args: { p_date: string }; Returns: string }
       create_invoice: {
         Args: { p_invoice_date?: string; p_placement: string }
         Returns: {

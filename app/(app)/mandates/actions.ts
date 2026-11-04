@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { all, dbError, lakhs, num, text, type ActionState } from "@/lib/forms";
+import { all, dbError, monthlyToAnnual, num, text, type ActionState } from "@/lib/forms";
 import type { Database } from "@/lib/database.types";
 
 type Stage = Database["public"]["Enums"]["pipeline_stage"];
@@ -201,8 +201,8 @@ export async function shareCv(_: ShareState, fd: FormData): Promise<ShareState> 
 /** Offer accepted (or already joined): the fee % and replacement window come from the agreement. */
 export async function recordPlacement(_: ActionState, fd: FormData): Promise<ActionState> {
   const { supabase } = await me();
-  const salary = lakhs(fd, "annual_fixed_salary");
-  if (!salary) return { error: "Enter the annual fixed salary in lakhs." };
+  const salary = monthlyToAnnual(fd, "monthly_fixed_salary");
+  if (!salary) return { error: "Enter the monthly fixed salary (no bonus or ESOPs)." };
   const joining = text(fd, "joining_date");
   const joined = fd.get("joined") === "on";
   if (joined && !joining) return { error: "Enter the joining date." };

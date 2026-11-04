@@ -320,7 +320,7 @@ function PlaceForm({ entry, close }: { entry: Entry; close: () => void }) {
     <form action={action} className="space-y-3">
       <input type="hidden" name="entry_id" value={entry.id} />
       <FormMessage state={state} />
-      <p className="text-[13px] text-muted">The fee % and replacement window come from the client&apos;s agreement. Billing picks this up.</p>
+      <p className="text-[13px] text-muted">Fee = agreement % × monthly fixed salary × 12. The % and the replacement window come from the client&apos;s agreement; Billing picks this up.</p>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Offer accepted on">
           <Input type="date" name="offer_accepted_on" defaultValue={today} />
@@ -328,8 +328,8 @@ function PlaceForm({ entry, close }: { entry: Entry; close: () => void }) {
         <Field label="Joining date" hint="Leave blank if not fixed yet.">
           <Input type="date" name="joining_date" />
         </Field>
-        <Field label="Annual fixed salary (lakhs) *">
-          <Input name="annual_fixed_salary" inputMode="decimal" required placeholder="24" />
+        <Field label="Monthly fixed salary (₹) *" hint="No bonus or ESOPs. 1.75 also works for ₹1,75,000.">
+          <Input name="monthly_fixed_salary" inputMode="decimal" required placeholder="1,75,000" />
         </Field>
         <Field label="Fee %" hint="Blank = from the agreement.">
           <Input name="fee_percent" inputMode="decimal" placeholder="10" />

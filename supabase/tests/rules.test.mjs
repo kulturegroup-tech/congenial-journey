@@ -200,8 +200,9 @@ const rem = await q(`select kind, title from v_reminders where kind = 'invoice_t
 ok(rem.length === 1 && rem[0].title.includes('deadline'), 'reminder to raise the invoice, with the 30-day deadline');
 
 const inv = await one(`select * from create_invoice($1)`, [P]);
-const yy = (await one(`select to_char(today_ist(), 'YY') as y`)).y;
-ok(inv.invoice_number === `PS-14-${yy}`, `invoice numbered ${inv.invoice_number}`);
+const fy = (await one(`select financial_year(today_ist()) as f`)).f;
+ok(inv.invoice_number === `PS/${fy}/014`, `invoice numbered ${inv.invoice_number}`);
+ok((await one(`select financial_year('2027-03-31') as a, financial_year('2027-04-01') as b`)).a === '2026-27', 'financial year runs April to March');
 ok(inv.tax === 'cgst_sgst' && Number(inv.cgst) === 18900 && Number(inv.sgst) === 18900 && Number(inv.total) === 247800, 'Maharashtra client: CGST 18,900 + SGST 18,900 = 2,47,800');
 ok((await one(`select ($1::date = today_ist() - 5 + 30) as a, ($2::date = today_ist() - 5 + 60) as b`, [inv.raise_by, inv.due_on])).a, 'raise-by = joining + 30');
 ok((await one(`select ($1::date = today_ist() - 5 + 60) as b`, [inv.due_on])).b, 'due = joining + 60 (Trilegal-style terms)');
@@ -224,6 +225,19 @@ const P2 = await id(`insert into placements (pipeline_entry_id, joining_date, an
 const inv2 = await one(`select * from create_invoice($1)`, [P2]);
 ok(inv2.tax === 'igst' && Number(inv2.igst) === 27000 && Number(inv2.cgst) === 0, 'Karnataka client: IGST 27,000');
 ok((await one(`select ($1::date = today_ist() + 15) as x`, [inv2.due_on])).x, 'standard letter: due 15 days from invoice');
+
+// a new financial year restarts the series at 001
+const nextFyStart = (await one(`select make_date(extract(year from today_ist())::int + case when extract(month from today_ist()) >= 4 then 1 else 0 end, 4, 1)::text as d`)).d;
+const eFy = await id(`insert into pipeline_entries (candidate_id, mandate_id, stage) values ($1, $2, 'confirmed')`, [D, M2]);
+await q(`insert into cv_shares (pipeline_entry_id, channels) values ($1, '{email}')`, [eFy]);
+const PFy = await id(`insert into placements (pipeline_entry_id, joining_date, annual_fixed_salary, status) values ($1, today_ist(), 1200000, 'joined')`, [eFy]);
+const invFy = await one(`select * from create_invoice($1, $2::date)`, [PFy, nextFyStart]);
+const nextFy = (await one(`select financial_year($1::date) as f`, [nextFyStart])).f;
+ok(invFy.invoice_number === `PS/${nextFy}/001`, `first invoice of the next financial year is ${invFy.invoice_number}`);
+const sFy = await one(`select next_invoice_serial, invoice_fy from settings`);
+ok(sFy.next_invoice_serial === 2 && sFy.invoice_fy === nextFy, 'series now counts within the new year');
+await q(`update invoices set status = 'cancelled' where id = $1`, [invFy.id]);
+await fails(`select create_invoice($1, today_ist())`, /falls in financial year/, 'cannot backdate into a year the series has left', [PFy]);
 
 console.log('\nReplacement');
 await q(`update placements set status = 'left_in_window', left_on = today_ist(), left_reason = 'Moved firms' where id = $1`, [P]);

@@ -48,6 +48,12 @@ export async function saveClient(_: ActionState, fd: FormData): Promise<ActionSt
     }
     return { error: dbError(res.error) };
   }
+  // New client with terms filled in: save the agreement too.
+  if (!id && (text(fd, "fee_legal") || text(fd, "fee_support_staff"))) {
+    const today = new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 10);
+    const err = await writeAgreement(supabase, fd, res.data.id, null, today);
+    if (err) return { error: `Client saved, but the agreement wasn't: ${err} Add it from the client's page.`, id: res.data.id };
+  }
   refresh();
   redirect(`/clients/${res.data.id}`);
 }
@@ -82,16 +88,15 @@ export async function deleteContact(id: string) {
   return { ok: true };
 }
 
-/** Agreement terms and fee rates. These drive fees, duplicates, deadlines and reminders. */
-export async function saveAgreement(_: ActionState, fd: FormData): Promise<ActionState> {
-  const { supabase } = await me();
-  const id = text(fd, "id");
-  const clientId = text(fd, "client_id")!;
-  const startsOn = text(fd, "starts_on");
-  if (!startsOn) return { error: "When does the agreement start?" };
+type Supa = Awaited<ReturnType<typeof createClient>>;
+
+/** Reads the agreement fields (shared by the agreement dialog and the new-client form) and saves them with the fee rates. */
+async function writeAgreement(supabase: Supa, fd: FormData, clientId: string, id: string | null, startDefault?: string): Promise<string | null> {
+  const startsOn = text(fd, "starts_on") ?? startDefault ?? null;
+  if (!startsOn) return "When does the agreement start?";
   const feeLegal = num(fd, "fee_legal");
   const feeSupport = num(fd, "fee_support_staff");
-  if (feeLegal == null && feeSupport == null) return { error: "Enter at least one fee %." };
+  if (feeLegal == null && feeSupport == null) return "Enter at least one fee %.";
 
   const row = {
     client_id: clientId,
@@ -109,19 +114,26 @@ export async function saveAgreement(_: ActionState, fd: FormData): Promise<Actio
     portal_name: text(fd, "portal_name"),
     copy_ta_on_partner_shares: bool(fd, "copy_ta_on_partner_shares"),
     no_fee_if_backed_out: bool(fd, "no_fee_if_backed_out"),
-    notes: text(fd, "notes"),
+    notes: text(fd, "agreement_notes"),
   };
   const res = id
     ? await supabase.from("agreements").update(row).eq("id", id).select("id").single()
     : await supabase.from("agreements").insert(row).select("id").single();
-  if (res.error || !res.data) return { error: dbError(res.error) };
+  if (res.error || !res.data) return dbError(res.error);
 
   const rates = [
     feeLegal != null ? { agreement_id: res.data.id, role_category: "legal" as const, fee_percent: feeLegal } : null,
     feeSupport != null ? { agreement_id: res.data.id, role_category: "support_staff" as const, fee_percent: feeSupport } : null,
   ].filter((r) => r !== null);
   const { error } = await supabase.from("agreement_fee_rates").upsert(rates, { onConflict: "agreement_id,role_category" });
-  if (error) return { error: dbError(error) };
+  return error ? dbError(error) : null;
+}
+
+/** Agreement terms and fee rates. These drive fees, duplicates, deadlines and reminders. */
+export async function saveAgreement(_: ActionState, fd: FormData): Promise<ActionState> {
+  const { supabase } = await me();
+  const err = await writeAgreement(supabase, fd, text(fd, "client_id")!, text(fd, "id"));
+  if (err) return { error: err };
   refresh();
   return { ok: true, message: "Agreement saved." };
 }

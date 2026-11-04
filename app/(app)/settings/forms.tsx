@@ -91,6 +91,7 @@ export type FirmSettings = {
   bank_details: string | null;
   invoice_prefix: string;
   next_invoice_serial: number;
+  invoice_fy: string | null;
   gst_rate: number;
   sac_code: string;
   stale_after_working_days: number;
@@ -121,7 +122,10 @@ export function FirmForm({ s, canEdit }: { s: FirmSettings; canEdit: boolean }) 
           <Field label="Invoice prefix">
             <Input name="invoice_prefix" defaultValue={s.invoice_prefix} />
           </Field>
-          <Field label="Next invoice number" hint="Change only to match your last paper invoice.">
+          <Field
+            label="Next invoice number"
+            hint={`${s.invoice_fy ? `For ${s.invoice_fy}. ` : ""}Restarts at 1 every April. Numbers look like ${s.invoice_prefix}/2026-27/014.`}
+          >
             <Input name="next_invoice_serial" type="number" min={1} defaultValue={s.next_invoice_serial} />
           </Field>
           <Field label="GST %">

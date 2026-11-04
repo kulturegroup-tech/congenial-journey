@@ -10,6 +10,16 @@ import { shareContext, shareCv, type Finding, type ShareState } from "../actions
 type Ctx = Awaited<ReturnType<typeof shareContext>>;
 type Loaded = Exclude<Ctx, { error: string }>;
 
+// Why a blocked share went through anyway. Picked from a list so the reasons can be counted later.
+const OVERRIDE_REASONS = [
+  "Client asked for this profile",
+  "Client confirmed it isn't a duplicate",
+  "Earlier application is older than the cooling-off period",
+  "Candidate never actually applied there (wrong entry)",
+  "Earlier application was for a different office or team, and the client is fine with it",
+  "Other",
+];
+
 const ruleLabel: Record<string, string> = {
   prior_application: "Already applied",
   already_shared_by_us: "We've shared before",
@@ -77,6 +87,9 @@ function ShareForm({ entryId, ctx, onClose, onShared }: { entryId: string; ctx: 
   const [toEmail, setToEmail] = useState(to?.email ?? "");
   const [ccText, setCcText] = useState(ctx.agreement?.copy_ta_on_partner_shares || cc.length ? cc.join(", ") : "");
   const [fileId, setFileId] = useState(ctx.files[0]?.id ?? "");
+  const [reason, setReason] = useState("");
+  const [reasonNote, setReasonNote] = useState("");
+  const overrideReason = [reason, reasonNote.trim()].filter(Boolean).join(": ");
   const [channels, setChannels] = useState<string[]>(["email", ...(ctx.agreement?.requires_portal ? ["portal"] : [])]);
 
   const firstName = to?.name.split(" ")[0] ?? "";
@@ -223,9 +236,22 @@ function ShareForm({ entryId, ctx, onClose, onShared }: { entryId: string; ctx: 
       </Field>
 
       {blocking ? (
-        <Field label="Share anyway? Say why" hint="Saved with the share, so the team can see why it went through.">
-          <Input name="override_reason" required placeholder="e.g. Client asked for this profile specifically" />
-        </Field>
+        <div className="grid gap-3 rounded-lg border border-danger/30 p-3 md:grid-cols-2">
+          <input type="hidden" name="override_reason" value={overrideReason} />
+          <Field label="Share anyway? Pick the reason *" hint="Saved with the share, so the team can see why it went through.">
+            <Select value={reason} onChange={(e) => setReason(e.target.value)} required>
+              <option value="" disabled>
+                Pick a reason
+              </option>
+              {OVERRIDE_REASONS.map((r) => (
+                <option key={r}>{r}</option>
+              ))}
+            </Select>
+          </Field>
+          <Field label={reason === "Other" ? "What happened? *" : "Note"}>
+            <Input value={reasonNote} onChange={(e) => setReasonNote(e.target.value)} required={reason === "Other"} placeholder="Anything the team should know" />
+          </Field>
+        </div>
       ) : null}
 
       {state?.error ? <p className="rounded-lg bg-danger-soft px-3 py-2 text-[13px] text-danger">{state.error}</p> : null}

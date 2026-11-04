@@ -81,3 +81,12 @@ export function pqeInput(start: string | null) {
   if (now.getDate() < s.getDate()) months -= 1;
   return `${Math.floor(months / 12)}.${months % 12}`;
 }
+
+/** Monthly fixed salary typed in rupees ("175000", "1,75,000") or lakhs ("1.75") → annual rupees (× 12).
+ *  The fee is worked out on fixed pay only: no bonus, no ESOPs. */
+export const monthlyToAnnual = (fd: FormData, key: string) => {
+  const n = num(fd, key);
+  if (n === null || n <= 0) return null;
+  const monthly = n < 100 ? n * 100_000 : n;
+  return Math.round(monthly * 12);
+};

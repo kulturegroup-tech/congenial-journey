@@ -110,7 +110,7 @@ async function Invoice({ params }: { params: Params }) {
                   </div>
                   {p ? (
                     <div className="text-neutral-600">
-                      {+(p.fee_percent ?? 0)}% of annual fixed salary {formatMoney(p.annual_fixed_salary)}
+                      {+(p.fee_percent ?? 0)}% of annual fixed salary {formatMoney(p.annual_fixed_salary)} ({formatMoney(p.annual_fixed_salary / 12)} a month × 12)
                     </div>
                   ) : null}
                 </td>

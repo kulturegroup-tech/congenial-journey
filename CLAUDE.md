@@ -7,7 +7,7 @@ The full spec is the "Paradigm Shifters — Recruitment Platform Build Spec" doc
 ## Stack
 
 - Next.js 16 (App Router, TypeScript) on Netlify (site `paradigm-shifters`), deployed from GitHub on every push to `main`. Netlify adds its Next.js runtime automatically; config is in `netlify.toml`
-- Supabase project `paradigm-shifters` (ref `fqsqfxshjedljagxytat`, Mumbai). Migrations 1–3 are applied; apply new ones in order
+- Supabase project `paradigm-shifters` (ref `fqsqfxshjedljagxytat`, Mumbai). Migrations 1–4 are applied live; 5 and 6 are written and tested but waiting to be applied. Apply new ones in order
 - Supabase: Postgres, Auth (Google sign-in + email links), Storage (private buckets), cron + edge functions
 - Tailwind v4. Design tokens live in `app/globals.css`; shared UI in `components/ui.tsx`, so a design pass touches two files
 - Claude API for the agents in phase 3 (not before)
@@ -67,9 +67,20 @@ Never edit a migration that has been applied. Add a new one, then run `node supa
 - **Duplicate**: the candidate's CV already reached the client by any route (another agency, job portal, client website, direct email to anyone at the firm) inside the client's **cooling-off period** (from the agreement; default 6 months). Recorded as `prior_applications`, captured from screening-call field 12.
 - **Resume validity**: a CV we share stays "ours" at that client for the agreement's validity period (usually 12 months). If they hire the candidate inside it, the fee is due.
 - **Replacement**: one-time, usually 3 months from joining. The standard letter excludes leaving for medical reasons.
-- **Fee**: agreement % × annual fixed salary (mostly 10%; some 6% or 13%; Trilegal pays 9% for support staff). GST 18% on top: CGST + SGST when the client's GSTIN starts with 27 (Maharashtra), IGST otherwise.
+- **Fee**: agreement % × annual fixed salary, where annual = monthly fixed × 12. Bonuses and ESOPs never count. The team enters the monthly figure; the app stores the annual (mostly 10%; some 6% or 13%; Trilegal pays 9% for support staff). GST 18% on top: CGST + SGST when the client's GSTIN starts with 27 (Maharashtra), IGST otherwise.
+- **Invoices**: raised on the joining day. Numbered `PS/2026-27/014`; the series restarts at 001 every 1 April (`financial_year()`, `settings.invoice_fy`).
 - **Invoice deadline**: some agreements forfeit the fee if the invoice isn't raised within N days of joining (Trilegal: 30). Payment terms count from the invoice date or from joining, depending on the agreement.
 - **Interest tags**: firms, cities and roles a candidate wants (screening-call field 5). They drive re-engagement, the top-priority feature.
+
+## Confirmed with Khyati (04 Nov 2026)
+
+- Invoice series resets every financial year; bill on joining day; fee on monthly fixed × 12, no bonus or ESOPs
+- Everyone sees money (fees, invoices): they track their targets
+- Stale mandate after 5 working days; re-engagement alerts go to whoever last spoke to the candidate, else the mandate owner; the 12 pipeline stages are right
+- Sharing past a duplicate block: pick a reason from a list (`OVERRIDE_REASONS` in the share dialog) plus a note
+- Replacement terms differ by client: set them in the agreement while creating the client
+- Firm grades in use: A0–A5 and SA1–SA5 (year mapping still to confirm)
+- Still open: the default cooling-off / CV validity when a client has no agreement (6 / 12 months for now), CTC in the share note, invoice number format, everything in the call list not answered yet
 
 ## Data conventions
 

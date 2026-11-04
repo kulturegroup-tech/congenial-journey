@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { ButtonLink, Field, Input, Select, SubmitButton, Textarea } from "@/components/form";
 import { Card } from "@/components/ui";
 import { saveClient } from "./actions";
+import { AgreementFields } from "./agreement-fields";
 
 export type ClientValues = {
   id?: string;
@@ -22,7 +23,7 @@ export function ClientForm({ values, firms, team }: { values: ClientValues; firm
   const [state, action] = useActionState(saveClient, null);
   const v = values;
   return (
-    <form action={action} className="max-w-3xl space-y-5">
+    <form action={action} className="max-w-4xl space-y-5">
       {v.id ? <input type="hidden" name="id" value={v.id} /> : null}
       {state?.error ? (
         <p className="rounded-lg bg-danger-soft px-3 py-2 text-[13px] text-danger">
@@ -77,6 +78,19 @@ export function ClientForm({ values, firms, team }: { values: ClientValues; firm
           <Textarea name="notes" rows={3} defaultValue={v.notes ?? ""} />
         </Field>
       </Card>
+      {!v.id ? (
+        <Card className="space-y-4 p-5">
+          <div>
+            <h3 className="font-semibold">Agreement terms</h3>
+            <p className="text-[13px] text-muted">
+              From their signed letter: fees, cooling-off, CV validity, replacement and payment terms. Leave the fees blank if you don&apos;t have it yet and add it
+              later from the client&apos;s page.
+            </p>
+          </div>
+          <AgreementFields optionalStart />
+        </Card>
+      ) : null}
+
       <div className="flex gap-2">
         <SubmitButton>{v.id ? "Save changes" : "Add client"}</SubmitButton>
         <ButtonLink href={v.id ? `/clients/${v.id}` : "/clients"} variant="ghost">

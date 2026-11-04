@@ -60,8 +60,8 @@ function PlacementForm({ p, close }: { p: PlacementRow; close: () => void }) {
         <Field label="Joining date">
           <Input type="date" name="joining_date" defaultValue={p.joining_date ?? ""} />
         </Field>
-        <Field label="Annual fixed salary (lakhs)">
-          <Input name="annual_fixed_salary" inputMode="decimal" defaultValue={+(p.annual_fixed_salary / 100_000).toFixed(2)} />
+        <Field label="Monthly fixed salary (₹)" hint="No bonus or ESOPs. The fee uses this × 12.">
+          <Input name="monthly_fixed_salary" inputMode="decimal" defaultValue={Math.round(p.annual_fixed_salary / 12)} />
         </Field>
         <Field label="Fee %" hint="Blank = from the agreement.">
           <Input name="fee_percent" inputMode="decimal" defaultValue={p.fee_percent ?? ""} />
