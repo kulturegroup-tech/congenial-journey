@@ -90,4 +90,4 @@ npm run test:db              # checks every business rule on an in-memory Postgr
 - **Reminders** and the **bell**: re-engagement alerts, calls today, follow-ups, stale mandates, invoices and payments
 - **Settings**: team and PINs (admin), change my PIN, firm details printed on invoices, defaults, practice areas
 
-Still to build: Odoo and sheet import. See `CLAUDE.md`.
+- **Import** (Settings → Import): Odoo export or a sheet tab as CSV; matches on LinkedIn, phone and email, with a review list for near-matches

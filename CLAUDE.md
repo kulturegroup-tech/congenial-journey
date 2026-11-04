@@ -7,7 +7,7 @@ The full spec is the "Paradigm Shifters — Recruitment Platform Build Spec" doc
 ## Stack
 
 - Next.js 16 (App Router, TypeScript) on Netlify (site `paradigm-shifters`), deployed from GitHub on every push to `main`. Netlify adds its Next.js runtime automatically; config is in `netlify.toml`
-- Supabase project `paradigm-shifters` (ref `fqsqfxshjedljagxytat`, Mumbai). Migrations 1–4 are applied live; 5 and 6 are written and tested but waiting to be applied. Apply new ones in order
+- Supabase project `paradigm-shifters` (ref `fqsqfxshjedljagxytat`, Mumbai). Migrations 1–5 are applied live; 6 (invoice series per financial year) is written and tested but waiting to be applied. Apply new ones in order
 - Supabase: Postgres, Auth (Google sign-in + email links), Storage (private buckets), cron + edge functions
 - Tailwind v4. Design tokens live in `app/globals.css`; shared UI in `components/ui.tsx`, so a design pass touches two files
 - Claude API for the agents in phase 3 (not before)
