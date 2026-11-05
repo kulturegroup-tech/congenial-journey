@@ -148,8 +148,13 @@ export function formatLongDay(day: string) {
 }
 
 /** "Good morning" / "Good afternoon" / "Good evening" by the hour in India. */
+/** Hour of the day in India time, 0–23. */
+export function istHour(now = new Date()) {
+  return Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hour12: false, timeZone: IST }).format(now)) % 24;
+}
+
 export function greeting(now = new Date()) {
-  const h = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hour12: false, timeZone: IST }).format(now));
+  const h = istHour(now);
   return h < 5 ? "Working late" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
 }
 

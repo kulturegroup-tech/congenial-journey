@@ -29,7 +29,8 @@ Env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (br
 - `lib/auth/allowed.ts`: who may sign in. Checked in `app/auth/callback/route.ts`
 - `lib/format.ts`: dates in India time, lakhs, rupees, phones, PQE
 - `app/(app)/layout.tsx`: sidebar, plus `TeamGate`, which shows setup, "not on team" or the page, all inside `components/providers.tsx` (toasts, right-click menus, the ⌘K palette, the "Log a call" button)
-- `app/(app)/today`: the home screen. `app/(app)/calendar`: day, week and month views of calls, interviews, follow-ups, joinings and payments
+- `app/(app)/today`: the home screen. The line under the greeting comes from `lib/day-line.ts` (picked from the person's own day, most important first); the illustration beside it from `lib/moments.ts` + `components/illustrations.tsx` (festivals, someone joining, target hit, month end, heavy rain; most days nothing). Add next year's festival dates to `FESTIVALS` each November. Tests: `npm run test:today`
+- `app/(app)/calendar`: day, week and month views of calls, interviews, follow-ups, joinings and payments
 - `app/(app)/<section>/page.tsx`: one folder per nav item. Lookup is a Client Component calling `rpc('lookup')`
 
 ## The database is the source of truth for business rules
@@ -133,6 +134,7 @@ Phase 2 (still to do): invoice PDF stored in the `invoices` bucket, reminder ema
 
 - **LinkedIn: no automation of any kind.** No scraping, auto-messaging or browser bots. Khyati's account has been blocked before. Store URLs only.
 - Candidate data is personal data under India's DPDP Act, and client agreements make candidate pay and submissions confidential. Never log personal data to the console or analytics. Never send it to any third-party service except the Claude API in phase 3.
+- The only other outside call is the Mumbai weather check (`lib/weather.ts`, MET Norway, June to mid-October, cached hourly). It sends a city's coordinates and nothing else; keep it that way.
 - RLS stays on for every table. Never use the service role key in the browser.
 - Only admins delete. Prefer status changes and exits over deletes.
 - Never commit real candidate data, CVs, GSTINs or bank details. Tests use fake data.
@@ -148,5 +150,5 @@ Phase 2 (still to do): invoice PDF stored in the `invoices` bucket, reminder ema
 
 - Tokens in `app/globals.css`: forest `accent` #24453a on white `surface` and `canvas` #f4f6f3; tile tones `mist`, `clay`, `sand`, `sage`, `lilac`, `accent-soft`. Headings in Instrument Serif (`font-display`), everything else in the system sans.
 - Use the parts, don't restyle by hand: `PageHeader`, `Tile` (coloured block with a title), `Card`, `Table`, `Empty`, `Avatar`, `Badge` from `components/ui.tsx`; `Button` variants primary / secondary / outline / ghost / danger and the bottom-sheet `Dialog` from `components/form.tsx`.
-- Interaction rules: quiet hovers (the `.state` layer, never glows or gradients); actions on a row appear on hover in place of its secondary text (`.swap`); every person row has a right-click menu (`PersonRow`); anything reversible shows a toast with Undo (`useToast`) instead of a confirm dialog; ⌘K does both search and actions; confetti only when someone joins.
+- Interaction rules: quiet hovers (the `.state` layer, never glows or gradients); actions on a row appear on hover in place of its secondary text (`.swap`); every person row has a right-click menu (`PersonRow`); anything reversible shows a toast with Undo (`useToast`) instead of a confirm dialog; ⌘K does both search and actions; confetti only when someone joins; Today's illustrations play once a day and then sit still.
 - Motion uses `var(--ease-spring)` and respects reduced motion.
