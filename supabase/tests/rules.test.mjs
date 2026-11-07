@@ -388,4 +388,29 @@ ok((await one(`select count(*)::int as n from settings`)).n === 0, 'outsider can
 await db.exec(`reset role`);
 
 
+console.log('\nSafe updates');
+// Supabase runs API requests with safeupdate on: UPDATE or DELETE without WHERE fails at runtime
+// ("UPDATE requires a WHERE clause"), and PGlite doesn't have it, so check every function's source.
+{
+  const fns = await q(`select p.proname, p.prosrc from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                       where n.nspname = 'public' and p.prolang in (select oid from pg_language where lanname in ('plpgsql', 'sql'))`);
+  const bad = [];
+  for (const f of fns) {
+    const src = f.prosrc.replace(/--[^\n]*/g, '').replace(/'(?:[^']|'')*'/g, "''");
+    for (const m of src.matchAll(/\b(update\s+(?!of\b)[a-z_.]+\s+set\b|delete\s+from\s+[a-z_.]+)[^;]*;/gi)) {
+      if (!/\bwhere\b/i.test(m[0])) bad.push(`${f.proname}: ${m[0].replace(/\s+/g, ' ').slice(0, 80)}`);
+    }
+  }
+  ok(bad.length === 0, `no UPDATE or DELETE without WHERE in ${fns.length} functions${bad.length ? ': ' + bad.join(' | ') : ''}`);
+}
+console.log('\nPolicies run once per query');
+{
+  const pols = await q(`select tablename, policyname, coalesce(qual, '') || ' ' || coalesce(with_check, '') as expr from pg_policies where schemaname = 'public'`);
+  const bare = /(is_team_member|is_admin|auth\.uid)\(\)/i;
+  const slow = pols.filter((r) => bare.test(r.expr.replace(/\(\s*select\s+[a-z_.]+\(\)\s+as\s+[a-z_]+\)/gi, '')));
+  ok(slow.length === 0, `all ${pols.length} policies wrap their check in (select …)${slow.length ? ': ' + slow.map((r) => r.tablename + '.' + r.policyname).join(', ') : ''}`);
+  const tm = await q(`select policyname from pg_policies where tablename = 'team_members' and cmd in ('SELECT', 'ALL')`);
+  ok(tm.length === 1, 'team_members has one read policy');
+}
+
 console.log(`\nAll ${passed} checks passed.`);

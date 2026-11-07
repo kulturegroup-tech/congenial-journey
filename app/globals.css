@@ -197,6 +197,29 @@ dialog.sheet::backdrop {
   }
 }
 
+/* Top loading bar (components/nav-progress.tsx). */
+.nav-progress {
+  position: fixed;
+  inset: 0 auto auto 0;
+  z-index: 90;
+  height: 3px;
+  width: 0;
+  background: var(--color-accent);
+  border-radius: 0 3px 3px 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.nav-progress[data-state="loading"] {
+  opacity: 1;
+  width: 85%;
+  transition: width 8s cubic-bezier(0.1, 0.7, 0.2, 1), opacity 0.15s;
+}
+.nav-progress[data-state="done"] {
+  opacity: 0;
+  width: 100%;
+  transition: width 0.2s ease-out, opacity 0.3s 0.15s;
+}
+
 /* Illustrated moments on Today (components/moment.tsx, components/illustrations.tsx).
    They play once (data-state="play"); without it every part rests in its final pose. */
 .moment {

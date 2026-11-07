@@ -6,8 +6,8 @@ The full spec is the "Paradigm Shifters — Recruitment Platform Build Spec" doc
 
 ## Stack
 
-- Next.js 16 (App Router, TypeScript) on Netlify (site `paradigm-shifters`), deployed from GitHub on every push to `main`. Netlify adds its Next.js runtime automatically; config is in `netlify.toml`
-- Supabase project `paradigm-shifters` (ref `fqsqfxshjedljagxytat`, Mumbai). Migrations 1–5 are applied live; 6 (invoice series per financial year) and 7 (interview dates, monthly target, undo for suggestion adds) are written and tested but waiting to be applied. Apply new ones in order. The mandate page reads the board without `interview_at` until 7 is live
+- Next.js 16 (App Router, TypeScript) on Vercel (project `paradigmshifters`, https://paradigmshifters.vercel.app), deployed from GitHub on every push to `main`. Functions run in Mumbai (`vercel.json`, next to the database). The old Netlify site is no longer used
+- Supabase project `paradigm-shifters` (ref `fqsqfxshjedljagxytat`, Mumbai). Migrations 1–5 are applied live; 6 (invoice series per financial year, and the fix for invoicing, which fails live today), 7 (interview dates, monthly target, undo for suggestion adds) and 8 (faster row-level checks, indexes) are written and tested but waiting to be applied. Apply new ones in order. Until 7 is live the app degrades: the mandate page reads the board without `interview_at`, Settings saves without the target
 - Supabase: Postgres, Auth (Google sign-in + email links), Storage (private buckets), cron + edge functions
 - Tailwind v4. Design tokens live in `app/globals.css`; shared UI in `components/ui.tsx` and `components/form.tsx`, so a design pass touches three files
 - Claude API for the agents in phase 3 (not before)
@@ -29,7 +29,7 @@ Env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (br
 - `lib/auth/allowed.ts`: who may sign in. Checked in `app/auth/callback/route.ts`
 - `lib/format.ts`: dates in India time, lakhs, rupees, phones, PQE
 - `app/(app)/layout.tsx`: sidebar, plus `TeamGate`, which shows setup, "not on team" or the page, all inside `components/providers.tsx` (toasts, right-click menus, the ⌘K palette, the "Log a call" button)
-- `app/(app)/today`: the home screen. The line under the greeting comes from `lib/day-line.ts` (picked from the person's own day, most important first); the illustration beside it from `lib/moments.ts` + `components/illustrations.tsx` (festivals, someone joining, target hit, month end, heavy rain; most days nothing). Add next year's festival dates to `FESTIVALS` each November. Tests: `npm run test:today`
+- `app/(app)/today`: the home screen. The line under the greeting comes from `lib/day-line.ts` (picked from the person's own day, most important first); the illustration beside it from `lib/moments.ts` + `components/illustrations.tsx` (festivals, someone joining, target hit, month end, heavy rain; most days nothing). Add next year's festival dates to `FESTIVALS` each November. Tests: `npm run test:app`
 - `app/(app)/calendar`: day, week and month views of calls, interviews, follow-ups, joinings and payments
 - `app/(app)/<section>/page.tsx`: one folder per nav item. Lookup is a Client Component calling `rpc('lookup')`
 
@@ -60,6 +60,8 @@ Triggers you should know about:
 - Stage, status, exit and owner changes are written to `activities`, which also keeps `mandates.last_activity_at` fresh.
 
 Never edit a migration that has been applied. Add a new one, then run `node supabase/tests/rules.test.mjs` (needs `npm i -D @electric-sql/pglite@0.2.17`). Add a test for every new rule.
+
+Supabase runs API calls with safeupdate on: an `UPDATE` or `DELETE` without `WHERE` fails at runtime ("UPDATE requires a WHERE clause"), even inside a function, and PGlite won't catch it. Always write a `WHERE` (`where id` for the one-row `settings`); the tests check every function. Wrap helpers in policies as `(select is_team_member())` so they run once per query; the tests check that too.
 
 ## Domain glossary
 
@@ -144,6 +146,8 @@ Phase 2 (still to do): invoice PDF stored in the `invoices` bucket, reminder ema
 - Desktop-first and dense: tables over cards, keyboard shortcuts, no page reloads for common actions.
 - Speed matters most on Lookup and the screening call form; those are used while on the phone.
 - Every list answers "who owns this and when did anything last happen".
+- Every click shows it was heard: a top bar on page changes (`components/nav-progress.tsx`; call `navigateTo()` instead of `router.push`), "Saving…" on buttons, and an error in words when something fails (`dbError` in `lib/forms.ts`). Never ignore what an action returns.
+- Salaries are typed loosely ("24", "24 L", "2.4 Cr", "24,00,000"): read them with `parseRupees` / `lakhs` / `monthlyToAnnual` and check `moneyProblem` first. Open private files with `openFile()` so Safari doesn't block the tab.
 - Plain words on screen: "Yet to speak", "Spoke", "Going quiet", "Drop", "Find someone". Stage keys in the database stay as they are; labels live in `lib/constants.ts`. The board groups the 12 stages into three phases: Talking to them, With the client, Closing.
 
 ### Design system (Forest & sage)

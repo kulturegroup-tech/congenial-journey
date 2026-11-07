@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { navigateTo } from "@/components/nav-progress";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ButtonLink } from "@/components/form";
@@ -126,7 +127,7 @@ export function LookupClient() {
           onKeyDown={(e) => {
             if (e.key === "Escape") setQ("");
             if (e.key === "Enter" && current?.hits[0])
-              router.push(`/candidates/${current.hits[0].candidate_id}`);
+              navigateTo(router, `/candidates/${current.hits[0].candidate_id}`);
           }}
           placeholder="Paste a LinkedIn URL, phone number, email or name"
           className="h-16 w-full bg-transparent text-[17px] outline-none placeholder:text-faint"

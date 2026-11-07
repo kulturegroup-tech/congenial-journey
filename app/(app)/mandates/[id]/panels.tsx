@@ -32,7 +32,16 @@ export function StatusControl({ id, status }: { id: string; status: string }) {
               const r = await setMandateStatus(id, v);
               toast({
                 message: r.error ?? (v === "active" && status !== "active" ? "Reopened. Suggestions are being refreshed." : `Marked ${l.toLowerCase()}`),
-                action: r.error ? undefined : { label: "Undo", onClick: () => start(async () => void (await setMandateStatus(id, status as never))) },
+                action: r.error
+                  ? undefined
+                  : {
+                      label: "Undo",
+                      onClick: () =>
+                        start(async () => {
+                          const u = await setMandateStatus(id, status as never);
+                          toast({ message: u.error ?? "Undone" });
+                        }),
+                    },
               });
             })
           }
@@ -44,6 +53,10 @@ export function StatusControl({ id, status }: { id: string; status: string }) {
     </div>
   );
 }
+
+/** What to say after Undo on an add. Entries can only be taken back for 15 minutes, before anything happens to them. */
+export const undoMessage = (u: { error?: string; removed?: number }) =>
+  u.error ?? (u.removed ? "Undone" : "Too late to undo. Drop them from the mandate instead.");
 
 export type Match = {
   candidate_id: string;
@@ -70,7 +83,7 @@ export function Matches({ mandateId, matches }: { mandateId: string; matches: Ma
       setPicked([]);
       toast({
         message: `${ids.length === 1 ? "1 person" : `${ids.length} people`} added to Yet to speak`,
-        action: r.added?.length ? { label: "Undo", onClick: () => start(async () => void (await undoAdds(r.added!))) } : undefined,
+        action: r.added?.length ? { label: "Undo", onClick: () => start(async () => toast({ message: undoMessage(await undoAdds(r.added!)) })) } : undefined,
       });
     });
   return (
@@ -174,7 +187,7 @@ export function AddCandidate({ mandateId }: { mandateId: string }) {
                         const r = await addCandidates(mandateId, [h.candidate_id]);
                         toast({
                           message: r.error ?? `${h.full_name} added to Yet to speak`,
-                          action: r.added?.length ? { label: "Undo", onClick: () => start(async () => void (await undoAdds(r.added!))) } : undefined,
+                          action: r.added?.length ? { label: "Undo", onClick: () => start(async () => toast({ message: undoMessage(await undoAdds(r.added!)) })) } : undefined,
                         });
                       })
                     }

@@ -210,7 +210,11 @@ export function Board({ entries, exitReasons }: { entries: Entry[]; exitReasons:
         onShared={() => {
           const then = share?.then;
           const e = optimistic.find((x) => x.id === share?.id);
-          if (e && then && idx(then) > idx("cv_shared")) start(async () => void (await moveStage(e.id, then as never)));
+          if (e && then && idx(then) > idx("cv_shared"))
+            start(async () => {
+              const r = await moveStage(e.id, then as never);
+              if (r.error) toast({ message: `${e.name}: ${r.error}` });
+            });
         }}
       />
       <DropDialog
@@ -220,7 +224,14 @@ export function Board({ entries, exitReasons }: { entries: Entry[]; exitReasons:
         onDone={(e) =>
           toast({
             message: `${e.name} dropped`,
-            action: { label: "Undo", onClick: () => start(async () => void (await reopenEntry(e.id))) },
+            action: {
+              label: "Undo",
+              onClick: () =>
+                start(async () => {
+                  const r = await reopenEntry(e.id);
+                  toast({ message: r.error ?? `${e.name} is back on the board` });
+                }),
+            },
           })
         }
       />

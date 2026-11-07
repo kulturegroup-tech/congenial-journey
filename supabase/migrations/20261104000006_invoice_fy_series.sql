@@ -69,6 +69,7 @@ begin
                else v_date + coalesce(a.payment_days, 15) end)
   returning * into inv;
 
-  update settings set next_invoice_serial = v_serial + 1, invoice_fy = v_fy, updated_at = now();
+  -- "where id": Supabase refuses UPDATE without WHERE (safeupdate), which broke invoicing in migration 1.
+  update settings set next_invoice_serial = v_serial + 1, invoice_fy = v_fy, updated_at = now() where id;
   return inv;
 end $$;

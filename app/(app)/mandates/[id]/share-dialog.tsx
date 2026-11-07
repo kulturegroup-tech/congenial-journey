@@ -5,6 +5,7 @@ import { useActionState, useEffect, useState } from "react";
 import { Button, Dialog, Field, Input, Select, SubmitButton, Textarea } from "@/components/form";
 import { formatDate, formatLakhs, formatPqe } from "@/lib/format";
 import { cvLink } from "../../candidates/actions";
+import { openFile } from "@/lib/open-file";
 import { shareContext, shareCv, type Finding, type ShareState } from "../actions";
 
 type Ctx = Awaited<ReturnType<typeof shareContext>>;
@@ -90,6 +91,7 @@ function ShareForm({ entryId, ctx, onClose, onShared }: { entryId: string; ctx: 
   const [reason, setReason] = useState("");
   const [reasonNote, setReasonNote] = useState("");
   const overrideReason = [reason, reasonNote.trim()].filter(Boolean).join(": ");
+  const [fileErr, setFileErr] = useState<string | null>(null);
   const [channels, setChannels] = useState<string[]>(["email", ...(ctx.agreement?.requires_portal ? ["portal"] : [])]);
 
   const firstName = to?.name.split(" ")[0] ?? "";
@@ -149,10 +151,7 @@ function ShareForm({ entryId, ctx, onClose, onShared }: { entryId: string; ctx: 
           ) : null}
           {fileId ? (
             <Button
-              onClick={async () => {
-                const r = await cvLink(fileId);
-                if (r.url) window.open(r.url, "_blank", "noopener");
-              }}
+              onClick={async () => setFileErr(await openFile(() => cvLink(fileId)))}
             >
               Download CV
             </Button>
@@ -161,6 +160,7 @@ function ShareForm({ entryId, ctx, onClose, onShared }: { entryId: string; ctx: 
             Done
           </Button>
         </div>
+        {fileErr ? <p className="text-[13px] text-danger">{fileErr}</p> : null}
       </div>
     );
   }

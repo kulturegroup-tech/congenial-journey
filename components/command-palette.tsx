@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { navigateTo } from "@/components/nav-progress";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ArrowUpRight, BriefcaseBusiness, Building2, CalendarDays, FileUp, IndianRupee, PhoneCall, Search, Settings, Sun, UserPlus, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -84,7 +85,7 @@ export function CommandPalette() {
   const items: { key: string; go: () => void; node: ReactNode }[] = [
     ...rows.map((p) => ({
       key: p.candidate_id,
-      go: () => router.push(`/candidates/${p.candidate_id}`),
+      go: () => navigateTo(router, `/candidates/${p.candidate_id}`),
       node: (
         <>
           <Avatar name={p.full_name} size={32} />
@@ -102,7 +103,7 @@ export function CommandPalette() {
       ? [
           {
             key: "new",
-            go: () => router.push(`/candidates/new?q=${encodeURIComponent(term)}`),
+            go: () => navigateTo(router, `/candidates/new?q=${encodeURIComponent(term)}`),
             node: (
               <>
                 <span className="grid h-8 w-8 place-items-center rounded-full bg-accent-soft text-accent">
@@ -118,7 +119,7 @@ export function CommandPalette() {
       : []),
     ...acts.map((a) => ({
       key: a.label,
-      go: () => (a.event ? window.dispatchEvent(new Event(a.event)) : router.push(a.href!)),
+      go: () => (a.event ? window.dispatchEvent(new Event(a.event)) : navigateTo(router, a.href!)),
       node: (
         <>
           <span className="grid h-8 w-8 place-items-center rounded-full bg-side text-ink/80">{a.icon}</span>

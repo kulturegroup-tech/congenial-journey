@@ -29,28 +29,44 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           }
         />
         <main className="min-w-0 flex-1">
-          <Suspense
-            fallback={
-              <div className="px-10 pt-24">
-                <TableSkeleton />
-              </div>
-            }
-          >
-            <TeamGate>{children}</TeamGate>
-          </Suspense>
+          {isSupabaseConfigured ? (
+            <>
+              {/* The page's own header shows at once; only its data waits. The membership check
+                  runs alongside instead of in front, so it doesn't hold up every screen. */}
+              <Suspense
+                fallback={
+                  <div className="px-10 pt-24">
+                    <TableSkeleton />
+                  </div>
+                }
+              >
+                {children}
+              </Suspense>
+              <Suspense fallback={null}>
+                <TeamGate />
+              </Suspense>
+            </>
+          ) : (
+            <SetupNotice />
+          )}
         </main>
       </div>
     </Providers>
   );
 }
 
-async function TeamGate({ children }: { children: ReactNode }) {
-  if (!isSupabaseConfigured) return <SetupNotice />;
+// Signed out: off to sign-in. Signed in but not on the team: a full-screen notice over the page
+// (row-level security already keeps the page itself empty for them).
+async function TeamGate() {
   const session = await getSession();
   if (session.state === "signed_out") redirect("/login");
   if (session.state === "not_on_team")
-    return <NotOnTeam email={session.email} />;
-  return <>{children}</>;
+    return (
+      <div className="fixed inset-0 z-[85] overflow-y-auto bg-canvas">
+        <NotOnTeam email={session.email} />
+      </div>
+    );
+  return null;
 }
 
 async function UserMenu() {

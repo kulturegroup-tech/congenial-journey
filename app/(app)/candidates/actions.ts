@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { all, dbError, json, lakhs, linkedinSlug, list, num, text, type ActionState } from "@/lib/forms";
+import { all, dbError, json, lakhs, linkedinSlug, list, moneyProblem, num, text, type ActionState } from "@/lib/forms";
 import type { Database } from "@/lib/database.types";
 
 type Source = Database["public"]["Enums"]["candidate_source"];
@@ -29,6 +29,8 @@ export async function saveCandidate(_: ActionState, fd: FormData): Promise<Actio
   const id = text(fd, "id");
   const fullName = text(fd, "full_name");
   if (!fullName) return { error: "Enter the candidate's name." };
+  const badMoney = moneyProblem(fd, { current_ctc: "Current CTC", expected_ctc: "Expected CTC" });
+  if (badMoney) return { error: badMoney };
 
   const linkedin = text(fd, "linkedin_url");
   const pqe = await practiceStart(supabase, text(fd, "pqe"));
@@ -256,6 +258,8 @@ export async function saveScreeningCall(_: ActionState, fd: FormData): Promise<A
   const scheduledId = text(fd, "scheduled_id");
   const outcome = text(fd, "outcome") as Outcome | null;
   if (!outcome) return { error: "Pick an outcome: fit, not a fit, or follow up." };
+  const badMoney = moneyProblem(fd, { current_ctc: "10 · Current CTC", expected_ctc: "11 · Expected CTC" });
+  if (badMoney) return { error: badMoney };
   const when = text(fd, "called_at");
 
   const call = {

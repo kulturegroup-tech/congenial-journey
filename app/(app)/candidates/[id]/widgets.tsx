@@ -3,6 +3,8 @@
 import { useActionState, useRef, useState, useTransition } from "react";
 import { Button, Dialog, Field, FormMessage, Input, Select, SubmitButton } from "@/components/form";
 import { createClient } from "@/lib/supabase/client";
+import { openFile } from "@/lib/open-file";
+import { useToast } from "@/components/toast";
 import { CITIES } from "@/lib/constants";
 import type { ActionState } from "@/lib/forms";
 import {
@@ -241,10 +243,14 @@ export function DeleteButton({ table, id, label = "Remove" }: { table: Parameter
 
 export function CancelCall({ id }: { id: string }) {
   const [pending, start] = useTransition();
+  const [err, setErr] = useState<string | null>(null);
   return (
-    <button type="button" disabled={pending} onClick={() => start(async () => void (await cancelCall(id)))} className="text-[12px] text-faint hover:text-danger">
-      {pending ? "…" : "Cancel"}
-    </button>
+    <>
+      <button type="button" disabled={pending} onClick={() => start(async () => setErr((await cancelCall(id))?.error ?? null))} className="text-[12px] text-faint hover:text-danger">
+        {pending ? "Cancelling…" : "Cancel"}
+      </button>
+      {err ? <span className="ml-2 text-[12px] text-danger">{err}</span> : null}
+    </>
   );
 }
 
@@ -289,16 +295,16 @@ export function CvUpload({ candidateId }: { candidateId: string }) {
 
 export function CvOpen({ fileId, name }: { fileId: string; name: string }) {
   const [busy, setBusy] = useState(false);
+  const toast = useToast();
   return (
     <button
       type="button"
       disabled={busy}
       onClick={async () => {
         setBusy(true);
-        const r = await cvLink(fileId);
+        const err = await openFile(() => cvLink(fileId));
         setBusy(false);
-        if (r.url) window.open(r.url, "_blank", "noopener");
-        else alert(r.error);
+        if (err) toast({ message: err });
       }}
       className="text-left text-accent hover:underline"
     >

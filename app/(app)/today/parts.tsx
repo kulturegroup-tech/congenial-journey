@@ -8,6 +8,7 @@ import { openPalette } from "@/components/command-palette";
 import { useToast } from "@/components/toast";
 import { Avatar } from "@/components/ui";
 import { addCandidates, dismissSuggestions, undoAdds } from "../mandates/actions";
+import { undoMessage } from "../mandates/[id]/panels";
 
 export function FindBar() {
   return (
@@ -75,8 +76,9 @@ export function SuggestionShelf({ mandateId, mandateName, people }: { mandateId:
               label: "Undo",
               onClick: () =>
                 start(async () => {
-                  await undoAdds(added);
-                  setGone((g) => g.filter((x) => !ids.includes(x)));
+                  const u = await undoAdds(added);
+                  toast({ message: undoMessage(u) });
+                  if (!u.error && u.removed) setGone((g) => g.filter((x) => !ids.includes(x)));
                 }),
             }
           : undefined,
@@ -117,8 +119,8 @@ export function SuggestionShelf({ mandateId, mandateName, people }: { mandateId:
           disabled={pending}
           onClick={() =>
             start(async () => {
-              await dismissSuggestions(mandateId);
-              toast({ message: "Hidden. They're still on the mandate page under Suggested." });
+              const r = await dismissSuggestions(mandateId);
+              toast({ message: r.error ?? "Hidden. They're still on the mandate page under Suggested." });
             })
           }
         >

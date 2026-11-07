@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { ActionState } from "@/lib/forms";
 import { agreementLink, attachAgreementFile, deleteContact, saveAgreement, saveContact } from "../actions";
 import { AgreementFields } from "../agreement-fields";
+import { openFile } from "@/lib/open-file";
 
 function useCloseOnOk(action: (s: ActionState, fd: FormData) => Promise<ActionState>, close: () => void) {
   return useActionState(async (s: ActionState, fd: FormData) => {
@@ -185,11 +186,7 @@ export function AgreementFile({ clientId, agreementId, hasFile }: { clientId: st
       {hasFile ? (
         <button
           type="button"
-          onClick={async () => {
-            const r = await agreementLink(agreementId);
-            if (r.url) window.open(r.url, "_blank", "noopener");
-            else setErr(r.error ?? null);
-          }}
+          onClick={async () => setErr(await openFile(() => agreementLink(agreementId)))}
           className="text-[12px] text-accent hover:underline"
         >
           Signed copy ↗

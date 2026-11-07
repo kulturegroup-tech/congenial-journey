@@ -47,31 +47,33 @@ export async function changeMyPin(_: ActionState, fd: FormData): Promise<ActionS
 export async function saveFirmSettings(_: ActionState, fd: FormData): Promise<ActionState> {
   const supabase = await createClient();
   const gstin = text(fd, "gstin")?.toUpperCase().replace(/\s/g, "") ?? null;
-  const { error, count } = await supabase
-    .from("settings")
-    .update(
-      {
-        firm_name: text(fd, "firm_name") ?? "Paradigm Shifters",
-        address: text(fd, "address"),
-        gstin,
-        bank_details: text(fd, "bank_details"),
-        invoice_prefix: text(fd, "invoice_prefix") ?? "PS",
-        next_invoice_serial: num(fd, "next_invoice_serial") ?? 1,
-        gst_rate: num(fd, "gst_rate") ?? 18,
-        sac_code: text(fd, "sac_code") ?? "9985",
-        stale_after_working_days: num(fd, "stale_after_working_days") ?? 5,
-        default_cooling_off_months: num(fd, "default_cooling_off_months") ?? 6,
-        default_resume_validity_months: num(fd, "default_resume_validity_months") ?? 12,
-        ...(num(fd, "monthly_joining_target") != null ? { monthly_joining_target: num(fd, "monthly_joining_target")! } : {}),
-        updated_at: new Date().toISOString(),
-      },
-      { count: "exact" },
-    )
-    .eq("id", true);
+  const target = num(fd, "monthly_joining_target");
+  const values = {
+    firm_name: text(fd, "firm_name") ?? "Paradigm Shifters",
+    address: text(fd, "address"),
+    gstin,
+    bank_details: text(fd, "bank_details"),
+    invoice_prefix: text(fd, "invoice_prefix") ?? "PS",
+    next_invoice_serial: num(fd, "next_invoice_serial") ?? 1,
+    gst_rate: num(fd, "gst_rate") ?? 18,
+    sac_code: text(fd, "sac_code") ?? "9985",
+    stale_after_working_days: num(fd, "stale_after_working_days") ?? 5,
+    default_cooling_off_months: num(fd, "default_cooling_off_months") ?? 6,
+    default_resume_validity_months: num(fd, "default_resume_validity_months") ?? 12,
+    updated_at: new Date().toISOString(),
+  };
+  const save = (v: typeof values & { monthly_joining_target?: number }) => supabase.from("settings").update(v, { count: "exact" }).eq("id", true);
+  let { error, count } = await save(target != null ? { ...values, monthly_joining_target: target } : values);
+  // Until the monthly-target column exists (migration 7), save everything else rather than nothing.
+  let note = "";
+  if (error?.code === "PGRST204" && error.message.includes("monthly_joining_target")) {
+    ({ error, count } = await save(values));
+    note = " The monthly target will save once the database update is applied.";
+  }
   if (error) return { error: dbError(error) };
   if (!count) return { error: "Only an admin can change these." };
   refresh();
-  return { ok: true, message: "Saved." };
+  return { ok: true, message: `Saved.${note}` };
 }
 
 export async function addPracticeArea(_: ActionState, fd: FormData): Promise<ActionState> {

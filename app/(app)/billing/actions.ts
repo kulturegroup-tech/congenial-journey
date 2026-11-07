@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { bool, dbError, monthlyToAnnual, num, text, type ActionState } from "@/lib/forms";
+import { bool, dbError, moneyProblem, monthlyToAnnual, num, text, type ActionState } from "@/lib/forms";
 import type { Database } from "@/lib/database.types";
 
 type PStatus = Database["public"]["Enums"]["placement_status"];
@@ -22,6 +22,8 @@ export async function updatePlacement(_: ActionState, fd: FormData): Promise<Act
   if ((status === "joined" || status === "completed" || status === "left_in_window") && !joining) return { error: "Enter the joining date." };
   const leftOn = text(fd, "left_on");
   if (status === "left_in_window" && !leftOn) return { error: "When did they leave?" };
+  const badMoney = moneyProblem(fd, { monthly_fixed_salary: "Monthly fixed salary" });
+  if (badMoney) return { error: badMoney };
   const salary = monthlyToAnnual(fd, "monthly_fixed_salary");
   const { error } = await supabase
     .from("placements")

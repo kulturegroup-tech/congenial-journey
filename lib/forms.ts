@@ -16,11 +16,40 @@ export const num = (fd: FormData, key: string) => {
   return Number.isFinite(n) ? n : null;
 };
 
-/** Lakhs typed by the user ("24", "24.5") → rupees. */
-export const lakhs = (fd: FormData, key: string) => {
-  const n = num(fd, key);
-  return n === null ? null : Math.round(n * 100_000);
-};
+/**
+ * A salary as people type it → rupees. "24", "24.5", "24 L", "24 lakhs", "2.4 Cr", "24,00,000", "₹24,00,000".
+ * A bare number under 1,000 is lakhs; 1,00,000 and up is rupees; in between we ask rather than guess.
+ */
+export function parseRupees(raw: string): { value: number | null; error?: string } {
+  const s = raw.toLowerCase().replace(/₹|rs\.?|inr|p\.?a\.?|per annum|ctc/g, "").replace(/[,\s]/g, "");
+  if (!s) return { value: null };
+  if (/\d\s*(-|to|–)\s*\d/.test(s)) return { value: null, error: "one number, not a range (put the range in the notes)" };
+  const m = s.match(/^(\d+(?:\.\d+)?)(cr|crore|crores|l|lakh|lakhs|lac|lacs|lpa|k)?$/);
+  if (!m) return { value: null, error: "a number like 24 (lakhs) or 24,00,000" };
+  const n = Number(m[1]);
+  const unit = m[2] ?? "";
+  let rupees: number;
+  if (unit.startsWith("c")) rupees = n * 1_00_00_000;
+  else if (unit === "k") rupees = n * 1_000;
+  else if (unit) rupees = n * 1_00_000;
+  else if (n < 1_000) rupees = n * 1_00_000;
+  else if (n >= 1_00_000) rupees = n;
+  else return { value: null, error: "lakhs or rupees? Type 24 for 24 lakhs, or 24,00,000" };
+  if (rupees > 99_99_99_99_999) return { value: null, error: "too large; type it in lakhs, like 24" };
+  return { value: Math.round(rupees) };
+}
+
+/** A salary field → rupees, or null when empty or unreadable (check moneyProblem first). */
+export const lakhs = (fd: FormData, key: string) => parseRupees(text(fd, key) ?? "").value;
+
+/** The first salary field that can't be read, as a sentence for the form, or null when all are fine. */
+export function moneyProblem(fd: FormData, fields: Record<string, string>): string | null {
+  for (const [key, label] of Object.entries(fields)) {
+    const r = parseRupees(text(fd, key) ?? "");
+    if (r.error) return `${label}: enter ${r.error}.`;
+  }
+  return null;
+}
 
 /** Comma- or newline-separated list. */
 export const list = (fd: FormData, key: string) =>
@@ -62,6 +91,13 @@ export function dbError(e: { code?: string; message: string } | null | undefined
   if (e.code === "23503") return "That record is still linked to something else, so it can't be removed.";
   if (e.code === "23514") return "Some values aren't allowed. Check the form and try again.";
   if (e.code === "42501") return "You don't have permission to do that.";
+  if (e.code === "22003") return "A number is too large. Type salaries in lakhs, like 24 or 24.5.";
+  if (e.code === "22P02" || e.code === "22007" || e.code === "22008") return "One of the values isn't in the right format. Check numbers and dates.";
+  if (e.code === "23502") return "A required field is empty.";
+  if (e.code === "PGRST204" || e.code === "PGRST202" || e.code === "42703" || e.code === "42883")
+    return "This part of the app is waiting for a database update. Nothing was saved; let Priyanshi know.";
+  if (/requires a WHERE clause/i.test(e.message)) return "Couldn't save because of a database bug. Nothing was changed; let Priyanshi know.";
+  if (/fetch failed|network|timed? ?out/i.test(e.message)) return "Couldn't reach the database. Check your internet and try again.";
   return e.message;
 }
 
@@ -85,8 +121,6 @@ export function pqeInput(start: string | null) {
 /** Monthly fixed salary typed in rupees ("175000", "1,75,000") or lakhs ("1.75") → annual rupees (× 12).
  *  The fee is worked out on fixed pay only: no bonus, no ESOPs. */
 export const monthlyToAnnual = (fd: FormData, key: string) => {
-  const n = num(fd, key);
-  if (n === null || n <= 0) return null;
-  const monthly = n < 100 ? n * 100_000 : n;
-  return Math.round(monthly * 12);
+  const monthly = parseRupees(text(fd, key) ?? "").value;
+  return monthly && monthly > 0 ? Math.round(monthly * 12) : null;
 };

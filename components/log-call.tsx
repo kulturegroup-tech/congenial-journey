@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { navigateTo } from "@/components/nav-progress";
 import { useEffect, useState } from "react";
 import { PhoneCall } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -66,7 +67,7 @@ function Pick({ close }: { close: () => void }) {
               type="button"
               onClick={() => {
                 close();
-                router.push(`/candidates/${h.candidate_id}/call`);
+                navigateTo(router, `/candidates/${h.candidate_id}/call`);
               }}
               className="state state-ink flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left"
             >
