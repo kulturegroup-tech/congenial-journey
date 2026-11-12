@@ -1,19 +1,36 @@
 // Display helpers. India time, Indian number grouping, lakhs for money.
 const IST = "Asia/Kolkata";
 
+// Creating an Intl formatter is slow (it loads locale and time-zone data), and pages format
+// hundreds of dates, so each kind is built once and reused.
+const formatters = new Map<string, Intl.DateTimeFormat>();
+const dtf = (locale: string, options: Intl.DateTimeFormatOptions) => {
+  const key = locale + JSON.stringify(options);
+  let f = formatters.get(key);
+  if (!f) formatters.set(key, (f = new Intl.DateTimeFormat(locale, options)));
+  return f;
+};
+const numberFormatters = new Map<string, Intl.NumberFormat>();
+const nf = (options: Intl.NumberFormatOptions) => {
+  const key = JSON.stringify(options);
+  let f = numberFormatters.get(key);
+  if (!f) numberFormatters.set(key, (f = new Intl.NumberFormat("en-IN", options)));
+  return f;
+};
+
 const toDate = (value: string | Date) =>
   typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00+05:30`) : new Date(value);
 
-const istDay = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: IST }).format(d); // YYYY-MM-DD
+const istDay = (d: Date) => dtf("en-CA", { timeZone: IST }).format(d); // YYYY-MM-DD
 
 export function formatDate(value: string | Date | null | undefined) {
   if (!value) return "—";
-  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: IST }).format(toDate(value));
+  return dtf("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: IST }).format(toDate(value));
 }
 
 export function formatDateTime(value: string | Date | null | undefined) {
   if (!value) return "—";
-  return new Intl.DateTimeFormat("en-GB", {
+  return dtf("en-GB", {
     day: "2-digit", month: "short", hour: "numeric", minute: "2-digit", hour12: true, timeZone: IST,
   }).format(toDate(value));
 }
@@ -42,7 +59,7 @@ export function formatLakhs(rupees: number | null | undefined) {
 
 export function formatRupees(rupees: number | null | undefined) {
   if (rupees == null) return "—";
-  return "₹" + new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(rupees);
+  return "₹" + nf({ maximumFractionDigits: 0 }).format(rupees);
 }
 
 export function formatPhone(e164: string) {
@@ -65,7 +82,7 @@ export function formatPqeRange(min: number | null, max: number | null, grade?: s
 /** Rupees with paise, Indian grouping: ₹2,47,800.00 */
 export function formatMoney(rupees: number | null | undefined) {
   if (rupees == null) return "—";
-  return "₹" + new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(rupees);
+  return "₹" + nf({ minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(rupees);
 }
 
 const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
@@ -139,18 +156,18 @@ export function istDayOf(value: string | Date) {
 
 /** "3:00 pm" in India time. */
 export function formatTime(value: string | Date) {
-  return new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: IST }).format(toDate(value)).replace(" ", " ").toLowerCase();
+  return dtf("en-IN", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: IST }).format(toDate(value)).replace(" ", " ").toLowerCase();
 }
 
 /** "Wednesday, 4 November". */
 export function formatLongDay(day: string) {
-  return new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${day}T00:00:00Z`));
+  return dtf("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${day}T00:00:00Z`));
 }
 
 /** "Good morning" / "Good afternoon" / "Good evening" by the hour in India. */
 /** Hour of the day in India time, 0–23. */
 export function istHour(now = new Date()) {
-  return Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hour12: false, timeZone: IST }).format(now)) % 24;
+  return Number(dtf("en-GB", { hour: "numeric", hour12: false, timeZone: IST }).format(now)) % 24;
 }
 
 export function greeting(now = new Date()) {
@@ -160,7 +177,7 @@ export function greeting(now = new Date()) {
 
 /** "November" for a YYYY-MM-DD day. */
 export function monthName(day: string) {
-  return new Intl.DateTimeFormat("en-GB", { month: "long", timeZone: "UTC" }).format(new Date(`${day}T00:00:00Z`));
+  return dtf("en-GB", { month: "long", timeZone: "UTC" }).format(new Date(`${day}T00:00:00Z`));
 }
 
 /** Minutes from now until that instant (negative once it has passed). */

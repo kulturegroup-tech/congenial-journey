@@ -38,7 +38,7 @@ export async function proxy(request: NextRequest) {
     if (path !== "/") url.searchParams.set("next", path + request.nextUrl.search);
     return redirectTo(url);
   }
-  if (signedIn && path === "/login") return redirectTo(new URL("/", request.url));
+  if (signedIn && path === "/login") return redirectTo(new URL("/today", request.url));
 
   return response;
 }
