@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createServerClient } from "@supabase/ssr";
 import { isSupabaseConfigured, supabaseKey, supabaseUrl } from "@/lib/supabase/env";
 import { sessionExpiry } from "@/lib/supabase/session-cookie";
 
@@ -7,8 +6,6 @@ import { sessionExpiry } from "@/lib/supabase/session-cookie";
 // visitors to /login. This is an optimistic check only; RLS is what protects the data.
 export async function proxy(request: NextRequest) {
   if (!isSupabaseConfigured) return NextResponse.next({ request });
-  // A prefetch only fetches a screen's prebuilt outline, which holds no data: no session work needed.
-  if (request.headers.get("next-router-prefetch")) return NextResponse.next({ request });
 
   // Signed in with a token that's good for more than two minutes: nothing to refresh, so skip the
   // Supabase client entirely (it cost about a quarter of a second on every page). The page
@@ -19,6 +16,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next({ request });
   }
 
+  // Loaded only when a refresh is needed, so the proxy itself starts fast on a cold server.
+  const { createServerClient } = await import("@supabase/ssr");
   let response = NextResponse.next({ request });
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
@@ -55,6 +54,18 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
+// Prefetches skip the proxy altogether: they only fetch a screen's prebuilt outline (no data),
+// served straight from Vercel's cache. Going through the proxy, they waited on it and sometimes
+// took over 2 seconds, which made clicks feel dead. (Next.js hides the prefetch headers inside
+// the proxy, so this has to be decided here, not in code.)
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
+  matcher: [
+    {
+      source: "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+      missing: [
+        { type: "header", key: "next-router-prefetch" },
+        { type: "header", key: "purpose", value: "prefetch" },
+      ],
+    },
+  ],
 };
