@@ -1,11 +1,23 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { isSupabaseConfigured, supabaseKey, supabaseUrl } from "@/lib/supabase/env";
+import { sessionExpiry } from "@/lib/supabase/session-cookie";
 
 // Runs before every page: refreshes the Supabase session cookie and sends signed-out
 // visitors to /login. This is an optimistic check only; RLS is what protects the data.
 export async function proxy(request: NextRequest) {
   if (!isSupabaseConfigured) return NextResponse.next({ request });
+  // A prefetch only fetches a screen's prebuilt outline, which holds no data: no session work needed.
+  if (request.headers.get("next-router-prefetch")) return NextResponse.next({ request });
+
+  // Signed in with a token that's good for more than two minutes: nothing to refresh, so skip the
+  // Supabase client entirely (it cost about a quarter of a second on every page). The page
+  // still verifies the token itself, and row-level security guards the data.
+  const expires = sessionExpiry((name) => request.cookies.get(name)?.value, new URL(supabaseUrl).hostname.split(".")[0]);
+  if (expires && expires - Date.now() / 1000 > 120) {
+    if (request.nextUrl.pathname === "/login") return NextResponse.redirect(new URL("/today", request.url));
+    return NextResponse.next({ request });
+  }
 
   let response = NextResponse.next({ request });
   const supabase = createServerClient(supabaseUrl, supabaseKey, {

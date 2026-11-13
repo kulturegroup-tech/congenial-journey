@@ -25,14 +25,15 @@ const istDay = (d: Date) => dtf("en-CA", { timeZone: IST }).format(d); // YYYY-M
 
 export function formatDate(value: string | Date | null | undefined) {
   if (!value) return "—";
-  return dtf("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: IST }).format(toDate(value));
+  // en-GB writes September as "Sept"; the team writes "Sep" like the other months.
+  return dtf("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: IST }).format(toDate(value)).replace("Sept", "Sep");
 }
 
 export function formatDateTime(value: string | Date | null | undefined) {
   if (!value) return "—";
   return dtf("en-GB", {
     day: "2-digit", month: "short", hour: "numeric", minute: "2-digit", hour12: true, timeZone: IST,
-  }).format(toDate(value));
+  }).format(toDate(value)).replace("Sept", "Sep");
 }
 
 // Whole days between that date and today, in India time. Negative = in the future.

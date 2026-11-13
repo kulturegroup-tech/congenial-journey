@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:db": "node supabase/tests/rules.test.mjs",
-    "test:app": "node --no-warnings tests/today.test.mjs && node --no-warnings tests/forms.test.mjs"
+    "test:app": "node --no-warnings tests/today.test.mjs && node --no-warnings tests/forms.test.mjs && node --no-warnings tests/session.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
