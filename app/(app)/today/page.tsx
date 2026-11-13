@@ -221,6 +221,7 @@ async function TodayScreen() {
               return (
                 <PersonRow
                   key={c.id}
+                  href={`/candidates/${c.candidate_id}`}
                   person={{ id: c.candidate_id, name: c.candidates?.full_name ?? "", phone }}
                   className="state state-ink group mt-1.5 flex items-center gap-3 overflow-hidden rounded-2xl bg-white/65 px-3 py-2.5 first:mt-0"
                 >
@@ -263,6 +264,7 @@ async function TodayScreen() {
               return (
                 <PersonRow
                   key={f.id}
+                  href={`/candidates/${f.candidate_id}`}
                   person={{ id: f.candidate_id, name: f.candidates?.full_name ?? "", phone: f.candidates?.candidate_phones?.[0]?.phone }}
                   className="state state-ink group mt-1.5 flex items-center gap-3 overflow-hidden rounded-2xl bg-white/65 px-3 py-2.5 first:mt-0"
                 >

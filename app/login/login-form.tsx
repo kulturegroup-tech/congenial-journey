@@ -101,7 +101,7 @@ export function LoginForm() {
             type="button"
             onClick={withGoogle}
             disabled={busy !== null}
-            data-ripple className="state flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-accent px-4 font-medium text-white disabled:opacity-60"
+            data-ripple data-variant="primary" className="state btn-fill flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-accent px-4 font-medium text-white disabled:opacity-60"
           >
             {busy === "google" ? "Opening Google…" : "Sign in with Google"}
           </button>
@@ -137,7 +137,7 @@ export function LoginForm() {
           <button
             type="submit"
             disabled={busy !== null}
-            data-ripple className="state h-12 w-full overflow-hidden rounded-full bg-accent px-4 font-medium text-white disabled:opacity-60"
+            data-ripple data-variant="primary" className="state btn-fill h-12 w-full overflow-hidden rounded-full bg-accent px-4 font-medium text-white disabled:opacity-60"
           >
             {busy === "pin" ? "Signing in…" : "Sign in"}
           </button>

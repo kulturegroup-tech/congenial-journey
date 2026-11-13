@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "@/components/fast-link";
+import { RowLink } from "@/components/row-link";
 import { Suspense } from "react";
 import { Badge, Card, Empty, Page, PageHeader, Table, TableSkeleton } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
@@ -154,12 +155,12 @@ async function Billing() {
       <section>
         <h2 className="mb-2.5 text-[16.5px] font-semibold">Invoices</h2>
         {invoices.length ? (
-          <Table head={["Invoice", "Client", "Candidate", "Date", "Total", "Received", "Due", "Status"]}>
+          <Table head={["Invoice", "Client", "Candidate", "Date", "Total", "Received", "Due", "Status", ""]}>
             {invoices.map((i) => {
               const paid = paidOf(i);
               const late = (i.status === "sent" || i.status === "part_paid") && daysSince(i.due_on) > 0;
               return (
-                <tr key={i.id}>
+                <RowLink key={i.id} href={`/billing/invoices/${i.id}`}>
                   <td>
                     <Link href={`/billing/invoices/${i.id}`} className="font-semibold tabular-nums hover:text-accent">
                       {i.invoice_number}
@@ -174,7 +175,7 @@ async function Billing() {
                   <td>
                     <Badge tone={late ? "danger" : invTone[i.status]}>{late ? "overdue" : i.status.replace("_", " ")}</Badge>
                   </td>
-                </tr>
+                </RowLink>
               );
             })}
           </Table>

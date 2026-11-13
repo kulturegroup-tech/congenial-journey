@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "@/components/fast-link";
+import { RowLink } from "@/components/row-link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ButtonLink } from "@/components/form";
@@ -153,9 +154,9 @@ async function ClientScreen({ params }: { params: Params }) {
             <section>
               <h2 className="mb-2.5 text-[16.5px] font-semibold">Mandates</h2>
               {mandates.data?.length ? (
-                <Table head={["Mandate", "PQE", "Owner", "Status", "Shared", "Last activity"]}>
+                <Table head={["Mandate", "PQE", "Owner", "Status", "Shared", "Last activity", ""]}>
                   {mandates.data.map((m) => (
-                    <tr key={m.id}>
+                    <RowLink key={m.id} href={`/mandates/${m.id}`}>
                       <td>
                         <Link href={`/mandates/${m.id}`} className="font-medium hover:text-accent">
                           {m.title}
@@ -171,7 +172,7 @@ async function ClientScreen({ params }: { params: Params }) {
                       </td>
                       <td className="tabular-nums">{m.cvs_shared}</td>
                       <td className="whitespace-nowrap text-muted">{m.last_activity_at ? ago(m.last_activity_at) : "—"}</td>
-                    </tr>
+                    </RowLink>
                   ))}
                 </Table>
               ) : (

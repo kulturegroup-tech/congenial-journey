@@ -84,6 +84,81 @@ body {
 
 }
 
+/* Buttons fill in from the left on hover and drain away to the right (components/form.tsx).
+   The fill sits under the label; pressing adds the ripple and squares the corners. */
+.btn-fill::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--fill);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.38s var(--ease-quick);
+  pointer-events: none;
+}
+.btn-fill:hover::before {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+.btn-fill:hover::after {
+  opacity: 0;
+}
+.btn-fill:active::after {
+  opacity: 0.1;
+}
+.btn-fill[data-variant="primary"] { --fill: color-mix(in srgb, var(--color-accent) 72%, #000); }
+.btn-fill[data-variant="danger"] { --fill: color-mix(in srgb, var(--color-danger) 76%, #000); }
+.btn-fill[data-variant="secondary"] { --fill: color-mix(in srgb, var(--color-accent) 13%, transparent); }
+.btn-fill[data-variant="outline"] { --fill: var(--color-accent-soft); }
+.btn-fill[data-variant="ghost"] { --fill: color-mix(in srgb, var(--color-accent) 9%, transparent); }
+.btn-fill[data-variant="outline"]:hover,
+.btn-fill[data-variant="ghost"]:hover,
+.btn-fill[data-variant="secondary"]:hover {
+  color: var(--color-accent);
+}
+
+/* Rows that open a page (components/row-link.tsx): the whole row is the button. It fills with
+   sage, the name turns forest and an arrow slides in at the end. */
+.row-link {
+  cursor: pointer;
+}
+tr.row-link > td {
+  transition: background-color 0.2s var(--ease-quick);
+}
+tr.row-link:hover > td,
+tr.row-link:focus-within > td {
+  background-color: color-mix(in srgb, var(--color-accent-soft) 70%, transparent);
+}
+tr.row-link:active > td {
+  background-color: var(--color-accent-soft);
+}
+tr.row-link > td:first-child a {
+  transition: color 0.15s;
+}
+tr.row-link:hover > td:first-child a {
+  color: var(--color-accent);
+}
+tr.row-link > td.row-chevron {
+  width: 2.75rem;
+  padding-left: 0;
+  vertical-align: middle;
+  color: var(--color-accent);
+}
+.row-chevron svg {
+  opacity: 0;
+  transform: translateX(-8px);
+  transition:
+    opacity 0.2s var(--ease-quick),
+    transform 0.45s var(--ease-spring);
+}
+tr.row-link:hover .row-chevron svg,
+tr.row-link:focus-within .row-chevron svg {
+  opacity: 1;
+  transform: none;
+}
+
 /* Press ripple (added by components/motion.tsx). */
 .ripple {
   position: absolute;

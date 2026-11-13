@@ -3,6 +3,7 @@
 import Link from "@/components/fast-link";
 import { createContext, useCallback, useContext, useEffect, useState, type ElementType, type MouseEvent, type ReactNode } from "react";
 import { ArrowUpRight, Copy, MessageCircle, Phone, PhoneCall } from "lucide-react";
+import { RowLink } from "@/components/row-link";
 
 export type MenuItem = { label: string; icon?: ReactNode; href?: string; external?: boolean; onSelect?: () => void; kbd?: string; divider?: boolean };
 type Open = (e: MouseEvent, items: MenuItem[]) => void;
@@ -100,21 +101,30 @@ export function personMenu(p: { id: string; name: string; phone?: string | null 
   return items;
 }
 
-/** A row (tr, li or div) about one person: right-click opens their actions. */
+/** A row (tr, li or div) about one person: right-click opens their actions. With href, clicking anywhere on it opens that page. */
 export function PersonRow({
   as: Tag = "div",
   person,
+  href,
   className,
   children,
 }: {
   as?: ElementType;
   person: { id: string; name: string; phone?: string | null };
+  href?: string;
   className?: string;
   children: ReactNode;
 }) {
   const open = useContextMenu();
+  const menu = (e: MouseEvent) => open(e, personMenu(person));
+  if (href)
+    return (
+      <RowLink as={Tag} href={href} className={className} onContextMenu={menu}>
+        {children}
+      </RowLink>
+    );
   return (
-    <Tag className={className} onContextMenu={(e: MouseEvent) => open(e, personMenu(person))}>
+    <Tag className={className} onContextMenu={menu}>
       {children}
     </Tag>
   );

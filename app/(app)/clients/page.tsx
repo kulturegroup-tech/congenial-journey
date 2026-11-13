@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "@/components/fast-link";
+import { RowLink } from "@/components/row-link";
 import { Suspense } from "react";
 import { ButtonLink } from "@/components/form";
 import { Badge, Empty, Page, PageHeader, Table, TableSkeleton } from "@/components/ui";
@@ -42,14 +43,14 @@ async function ClientList() {
   if (!data?.length) return <Empty title="No clients yet">Add a client, then their contacts and agreement.</Empty>;
 
   return (
-    <Table head={["Client", "Open mandates", "Fee", "Cooling-off / validity", "Invoice", "GST", "Owner"]}>
+    <Table head={["Client", "Open mandates", "Fee", "Cooling-off / validity", "Invoice", "GST", "Owner", ""]}>
       {data.map((c) => {
         const a = [...c.agreements].sort((x, y) => y.starts_on.localeCompare(x.starts_on))[0];
         const open = c.mandates.filter((m) => m.status === "active" || m.status === "on_hold").length;
         const legal = a?.agreement_fee_rates.find((r) => r.role_category === "legal");
         const support = a?.agreement_fee_rates.find((r) => r.role_category === "support_staff");
         return (
-          <tr key={c.id}>
+          <RowLink key={c.id} href={`/clients/${c.id}`}>
             <td>
               <Link href={`/clients/${c.id}`} className="font-medium hover:text-accent">
                 {c.display_name}
@@ -83,7 +84,7 @@ async function ClientList() {
             </td>
             <td className="whitespace-nowrap">{c.gstin ? (c.gstin.startsWith("27") ? "CGST + SGST" : "IGST") : <span className="text-faint">No GSTIN</span>}</td>
             <td>{c.owner_id ? team[c.owner_id] ?? "—" : "—"}</td>
-          </tr>
+          </RowLink>
         );
       })}
     </Table>

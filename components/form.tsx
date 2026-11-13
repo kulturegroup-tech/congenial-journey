@@ -47,17 +47,18 @@ const variants: Record<Variant, string> = {
   ghost: "bg-transparent text-muted hover:text-ink",
   danger: "bg-danger text-white",
 };
-// Pressing squares the corners a little, with a spring: the shape answers the click.
+// Hovering fills the button in from the left (.btn-fill in globals.css); pressing squares the
+// corners a little, with a spring: the shape answers the click.
 const buttonBase =
-  "state inline-flex items-center justify-center gap-1.5 overflow-hidden rounded-full font-medium whitespace-nowrap transition-[border-radius,opacity] duration-500 [transition-timing-function:var(--ease-spring)] active:rounded-xl disabled:pointer-events-none disabled:opacity-50";
+  "state btn-fill inline-flex items-center justify-center gap-1.5 overflow-hidden rounded-full font-medium whitespace-nowrap transition-[border-radius,opacity] duration-500 [transition-timing-function:var(--ease-spring)] active:rounded-xl disabled:pointer-events-none disabled:opacity-50";
 const sizes = { sm: "h-8 px-3 text-[13px]", md: "h-10 px-4" };
 
 export function Button({ variant = "outline", size = "md", className, ...props }: ComponentProps<"button"> & { variant?: Variant; size?: "sm" | "md" }) {
-  return <button type="button" data-ripple {...props} className={cx(buttonBase, variants[variant], sizes[size], className)} />;
+  return <button type="button" data-ripple data-variant={variant} {...props} className={cx(buttonBase, variants[variant], sizes[size], className)} />;
 }
 
 export function ButtonLink({ variant = "outline", size = "md", className, ...props }: ComponentProps<typeof Link> & { variant?: Variant; size?: "sm" | "md" }) {
-  return <Link data-ripple {...props} className={cx(buttonBase, variants[variant], sizes[size], className)} />;
+  return <Link data-ripple data-variant={variant} {...props} className={cx(buttonBase, variants[variant], sizes[size], className)} />;
 }
 
 export function SubmitButton({
@@ -75,7 +76,7 @@ export function SubmitButton({
 }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" data-ripple disabled={pending} className={cx(buttonBase, variants[variant], sizes[size], className)}>
+    <button type="submit" data-ripple data-variant={variant} disabled={pending} className={cx(buttonBase, variants[variant], sizes[size], className)}>
       {pending ? pendingText : children}
     </button>
   );

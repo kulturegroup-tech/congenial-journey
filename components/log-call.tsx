@@ -25,8 +25,9 @@ export function LogCallButton() {
       <button
         type="button"
         data-ripple
+        data-variant="primary"
         onClick={() => setOpen(true)}
-        className="state no-print fixed bottom-7 right-8 z-40 flex h-14 items-center gap-2.5 overflow-hidden rounded-[20px] bg-accent pl-5 pr-6 text-[14.5px] font-semibold text-white shadow-[0_10px_28px_-12px_rgb(36_69_58/0.7)] transition-[border-radius] duration-500 [transition-timing-function:var(--ease-spring)] active:rounded-2xl"
+        className="state btn-fill no-print fixed bottom-7 right-8 z-40 flex h-14 items-center gap-2.5 overflow-hidden rounded-[20px] bg-accent pl-5 pr-6 text-[14.5px] font-semibold text-white shadow-[0_10px_28px_-12px_rgb(36_69_58/0.7)] transition-[border-radius] duration-500 [transition-timing-function:var(--ease-spring)] active:rounded-2xl"
       >
         <PhoneCall size={18} strokeWidth={1.9} />
         Log a call

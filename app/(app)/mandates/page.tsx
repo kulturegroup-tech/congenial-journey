@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "@/components/fast-link";
+import { RowLink } from "@/components/row-link";
 import { Suspense } from "react";
 import { ButtonLink } from "@/components/form";
 import {
@@ -122,10 +123,11 @@ async function MandateBoard({ searchParams }: { searchParams: SP }) {
           "CVs shared",
           "Interviews",
           "Last activity",
+          "",
         ]}
       >
         {rows.map((m) => (
-          <tr key={m.id}>
+          <RowLink key={m.id} href={`/mandates/${m.id}`}>
             <td>
               <Link
                 href={`/mandates/${m.id}`}
@@ -167,7 +169,7 @@ async function MandateBoard({ searchParams }: { searchParams: SP }) {
                 {m.status === "lost" ? <Badge>Lost</Badge> : null}
               </div>
             </td>
-          </tr>
+          </RowLink>
         ))}
       </Table>
     </>

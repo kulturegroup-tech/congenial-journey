@@ -77,9 +77,9 @@ async function Filtered({ searchParams }: { searchParams: SP }) {
             {count} candidate{count === 1 ? "" : "s"}
             {count && count > data.length ? `, showing the ${data.length} most recently updated` : ""}
           </p>
-          <Table head={["Candidate", "Firm", "PQE", "Practice", "City", "Phone", "Last call"]}>
+          <Table head={["Candidate", "Firm", "PQE", "Practice", "City", "Phone", "Last call", ""]}>
             {data.map((c) => (
-              <PersonRow as="tr" key={c.id} person={{ id: c.id!, name: c.full_name ?? "", phone: c.phones?.[0] }}>
+              <PersonRow as="tr" key={c.id} href={`/candidates/${c.id}`} person={{ id: c.id!, name: c.full_name ?? "", phone: c.phones?.[0] }}>
                 <td>
                   <div className="flex items-center gap-3">
                     <Avatar name={c.full_name ?? "?"} size={32} />
