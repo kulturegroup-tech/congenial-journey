@@ -7,7 +7,7 @@ The full spec is the "Paradigm Shifters — Recruitment Platform Build Spec" doc
 ## Stack
 
 - Next.js 16 (App Router, TypeScript) on Vercel (project `paradigmshifters`, https://paradigmshifters.vercel.app), deployed from GitHub on every push to `main`. Functions run in Mumbai (`vercel.json`, next to the database). The old Netlify site is no longer used
-- Supabase project `paradigm-shifters` (ref `fqsqfxshjedljagxytat`, Mumbai). Migrations 1–5 are applied live; 6 (invoice series per financial year, and the fix for invoicing, which fails live today), 7 (interview dates, monthly target, undo for suggestion adds) and 8 (faster row-level checks, indexes) are written and tested but waiting to be applied. Apply new ones in order. Until 7 is live the app degrades: the mandate page reads the board without `interview_at`, Settings saves without the target
+- Supabase project `paradigm-shifters` (ref `fqsqfxshjedljagxytat`, Mumbai). Migrations 1–6 are applied live (6: invoice series per financial year, and the invoicing fix). 7 (interview dates, monthly target, undo for suggestion adds), 8 (faster row-level checks, indexes) and 9 (keep-awake ping) are written and tested, approved by Priyanshi on 13 Nov, but not yet applied: Supabase asks her to confirm migrations that contain a `delete`. Apply new ones in order. Until 7 is live the app degrades: the mandate page reads the board without `interview_at`, Settings saves without the target
 - Supabase: Postgres, Auth (Google sign-in + email links), Storage (private buckets), cron + edge functions
 - Tailwind v4. Design tokens live in `app/globals.css`; shared UI in `components/ui.tsx` and `components/form.tsx`, so a design pass touches three files
 - Claude API for the agents in phase 3 (not before)
@@ -136,6 +136,7 @@ Phase 2 (still to do): invoice PDF stored in the `invoices` bucket, reminder ema
 
 - **LinkedIn: no automation of any kind.** No scraping, auto-messaging or browser bots. Khyati's account has been blocked before. Store URLs only.
 - Candidate data is personal data under India's DPDP Act, and client agreements make candidate pay and submissions confidential. Never log personal data to the console or analytics. Never send it to any third-party service except the Claude API in phase 3.
+- Keep-awake: migration 9 schedules `pg_cron` + `pg_net` to open `/warm` (`app/warm/page.tsx`, public in `proxy.ts`) every 5 minutes, Mon–Sat 08:30–21:30 IST, so Vercel's free plan doesn't sleep. It sends nothing and reads nothing.
 - The only other outside call is the Mumbai weather check (`lib/weather.ts`, MET Norway, June to mid-October, cached hourly). It sends a city's coordinates and nothing else; keep it that way.
 - RLS stays on for every table. Never use the service role key in the browser.
 - Only admins delete. Prefer status changes and exits over deletes.

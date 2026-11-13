@@ -36,7 +36,8 @@ export async function proxy(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const signedIn = Boolean(data?.claims?.sub);
   const path = request.nextUrl.pathname;
-  const isPublic = path === "/login" || path.startsWith("/auth/");
+  // /warm is the keep-awake ping (app/warm/page.tsx): no session, and it shows nothing.
+  const isPublic = path === "/login" || path === "/warm" || path.startsWith("/auth/");
 
   const redirectTo = (target: URL) => {
     const redirect = NextResponse.redirect(target);
