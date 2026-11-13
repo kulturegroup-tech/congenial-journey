@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/fast-link";
 import { useMemo, useState } from "react";
 import { Button, Field, Input, Select } from "@/components/form";
 import { Card } from "@/components/ui";

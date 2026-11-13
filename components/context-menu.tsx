@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/fast-link";
 import { createContext, useCallback, useContext, useEffect, useState, type ElementType, type MouseEvent, type ReactNode } from "react";
 import { ArrowUpRight, Copy, MessageCircle, Phone, PhoneCall } from "lucide-react";
 

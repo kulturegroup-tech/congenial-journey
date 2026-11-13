@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/fast-link";
 import { useEffect, useState, useTransition } from "react";
 import { Search, UserPlus } from "lucide-react";
 import { Button } from "@/components/form";

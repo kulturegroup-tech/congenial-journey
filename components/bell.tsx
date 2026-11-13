@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/fast-link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { markAllRead, markRead } from "@/lib/actions/notifications";
 import { Bell } from "lucide-react";

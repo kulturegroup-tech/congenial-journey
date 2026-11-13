@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/fast-link";
 import { usePathname } from "next/navigation";
 import { Suspense, type ReactNode } from "react";
 import { BriefcaseBusiness, Building2, CalendarDays, IndianRupee, Search, Settings, Sun, Users } from "lucide-react";

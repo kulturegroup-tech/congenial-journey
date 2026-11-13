@@ -1,5 +1,5 @@
 // Shared building blocks. Styling lives here, in components/form.tsx and in app/globals.css.
-import Link from "next/link";
+import Link from "@/components/fast-link";
 import type { ReactNode } from "react";
 import { ChevronLeft } from "lucide-react";
 import { TitleBar } from "./title-bar";

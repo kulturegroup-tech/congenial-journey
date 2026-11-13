@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/fast-link";
 import { useRouter } from "next/navigation";
 import { navigateTo } from "@/components/nav-progress";
 import { useEffect, useState } from "react";

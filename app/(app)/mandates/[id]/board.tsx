@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/fast-link";
 import { useActionState, useOptimistic, useState, useTransition } from "react";
 import { ArrowRight, CalendarClock, CircleSlash, Send } from "lucide-react";
 import { Button, Dialog, Field, FormMessage, Input, Select, SubmitButton, Textarea } from "@/components/form";

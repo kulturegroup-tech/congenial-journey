@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/fast-link";
 import { useActionState } from "react";
 import { ButtonLink, Field, Input, Select, SubmitButton, Textarea } from "@/components/form";
 import { Card } from "@/components/ui";

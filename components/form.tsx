@@ -1,7 +1,7 @@
 "use client";
 
 // Form building blocks. Styling lives here, in components/ui.tsx and in app/globals.css.
-import Link from "next/link";
+import Link from "@/components/fast-link";
 import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { X } from "lucide-react";

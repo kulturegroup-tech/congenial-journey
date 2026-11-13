@@ -54,16 +54,19 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
-// Prefetches skip the proxy altogether: they only fetch a screen's prebuilt outline (no data),
-// served straight from Vercel's cache. Going through the proxy, they waited on it and sometimes
-// took over 2 seconds, which made clicks feel dead. (Next.js hides the prefetch headers inside
+// Outline prefetches ("next-router-prefetch: 1") skip the proxy altogether: they only fetch a
+// screen's prebuilt outline (no data), served straight from Vercel's cache. Going through the
+// proxy, they waited on it and sometimes took over 2 seconds, which made clicks feel dead.
+// Anything that renders with the session (navigations, and the full prefetch components/fast-link
+// asks for on hover, which sends no prefetch header) still passes through, so an expiring session
+// is refreshed here, where the new cookie can be saved. (Next.js hides the prefetch headers inside
 // the proxy, so this has to be decided here, not in code.)
 export const config = {
   matcher: [
     {
       source: "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
       missing: [
-        { type: "header", key: "next-router-prefetch" },
+        { type: "header", key: "next-router-prefetch", value: "1" },
         { type: "header", key: "purpose", value: "prefetch" },
       ],
     },

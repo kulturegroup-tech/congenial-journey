@@ -12,8 +12,10 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     // Reuse a page you visited in the last 30 seconds when you go back to it, instead of waiting
-    // on the server again. Saving anything refreshes the page, so edits still show at once.
-    staleTimes: { dynamic: 30 },
+    // on the server again. A page fetched ahead because the pointer rested on its link
+    // (components/fast-link.tsx) is reused for up to a minute. Saving anything clears both, so
+    // your own edits always show at once; a teammate's change shows within a minute.
+    staleTimes: { dynamic: 30, static: 60 },
   },
   turbopack: {
     rules: {

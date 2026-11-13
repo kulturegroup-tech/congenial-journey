@@ -146,6 +146,7 @@ Phase 2 (still to do): invoice PDF stored in the `invoices` bucket, reminder ema
 - Desktop-first and dense: tables over cards, keyboard shortcuts, no page reloads for common actions.
 - Speed matters most on Lookup and the screening call form; those are used while on the phone.
 - Every list answers "who owns this and when did anything last happen".
+- Links: import `Link` from `@/components/fast-link`, never `next/link`. It fetches the whole page (data included) once the pointer rests on a link, so the click opens it at once. Don't add `prefetch={true}` to links: that would render every visible page on the server on each load (the free plan's CPU can't take it), which is also why `partialPrefetching` stays off.
 - Every click shows it was heard: a top bar on page changes (`components/nav-progress.tsx`; call `navigateTo()` instead of `router.push`), "Saving…" on buttons, and an error in words when something fails (`dbError` in `lib/forms.ts`). Never ignore what an action returns.
 - Salaries are typed loosely ("24", "24 L", "2.4 Cr", "24,00,000"): read them with `parseRupees` / `lakhs` / `monthlyToAnnual` and check `moneyProblem` first. Open private files with `openFile()` so Safari doesn't block the tab.
 - Plain words on screen: "Yet to speak", "Spoke", "Going quiet", "Drop", "Find someone". Stage keys in the database stay as they are; labels live in `lib/constants.ts`. The board groups the 12 stages into three phases: Talking to them, With the client, Closing.

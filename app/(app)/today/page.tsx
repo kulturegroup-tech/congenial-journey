@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/fast-link";
 import { Suspense } from "react";
 import { ButtonLink } from "@/components/form";
 import { PersonRow } from "@/components/context-menu";

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/fast-link";
 import { useActionState, useEffect, useState } from "react";
 import { Button, Dialog, Field, Input, Select, SubmitButton, Textarea } from "@/components/form";
 import { formatDate, formatLakhs, formatPqe } from "@/lib/format";

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/fast-link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Avatar, Page, TableSkeleton } from "@/components/ui";
