@@ -4,6 +4,7 @@ import Link from "@/components/fast-link";
 import { usePathname } from "next/navigation";
 import { Suspense, type ReactNode } from "react";
 import { BriefcaseBusiness, Building2, CalendarDays, IndianRupee, Search, Settings, Sun, Users } from "lucide-react";
+import { BRAND_NAME, BRAND_SHORT } from "@/lib/brand";
 
 const nav = [
   { href: "/today", label: "Today", icon: Sun },
@@ -21,8 +22,8 @@ export function Sidebar({ footer, top }: { footer?: ReactNode; top?: ReactNode }
     <aside className="sticky top-0 flex h-screen w-[248px] shrink-0 flex-col border-r border-line bg-side">
       <div className="flex items-center justify-between gap-1 pb-6 pl-5 pr-3 pt-6">
         <Link href="/today" className="flex items-center gap-2.5">
-          <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-accent text-[12px] font-semibold tracking-wide text-white">PS</span>
-          <span className="whitespace-nowrap text-[14.5px] font-semibold tracking-[-0.01em]">Paradigm Shifters</span>
+          <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-accent text-[12px] font-semibold tracking-wide text-white">{BRAND_SHORT}</span>
+          <span className="whitespace-nowrap text-[14.5px] font-semibold tracking-[-0.01em]">{BRAND_NAME}</span>
         </Link>
         {top}
       </div>

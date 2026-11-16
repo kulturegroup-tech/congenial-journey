@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BRAND_NAME } from "@/lib/brand";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Badge, Card, Page, PageHeader, TableSkeleton } from "@/components/ui";
@@ -67,7 +68,7 @@ async function Invoice({ params }: { params: Params }) {
         <div className="print-sheet mx-auto max-w-[800px] rounded-xl border border-line bg-white p-10 text-[13px] text-black">
           <div className="flex justify-between gap-6">
             <div>
-              <p className="text-[20px] font-semibold">{s?.firm_name ?? "Paradigm Shifters"}</p>
+              <p className="text-[20px] font-semibold">{s?.firm_name ?? BRAND_NAME}</p>
               <p className="mt-1 max-w-xs whitespace-pre-wrap text-neutral-600">{s?.address ?? "Address not set: add it in Settings"}</p>
               {s?.gstin ? <p className="mt-1">GSTIN: <span className="font-mono">{s.gstin}</span></p> : null}
             </div>
@@ -155,7 +156,7 @@ async function Invoice({ params }: { params: Params }) {
               <p className="mt-1 whitespace-pre-wrap">{s?.bank_details ?? "Add bank details in Settings"}</p>
             </div>
             <div className="text-right">
-              <p className="mt-10">For {s?.firm_name ?? "Paradigm Shifters"}</p>
+              <p className="mt-10">For {s?.firm_name ?? BRAND_NAME}</p>
               <p className="mt-10 text-neutral-500">Authorised signatory</p>
             </div>
           </div>

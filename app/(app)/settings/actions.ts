@@ -1,6 +1,7 @@
 "use server";
 
 import { refresh } from "next/cache";
+import { BRAND_NAME, BRAND_SHORT } from "@/lib/brand";
 import { createClient } from "@/lib/supabase/server";
 import { bool, dbError, num, text, type ActionState } from "@/lib/forms";
 
@@ -49,11 +50,11 @@ export async function saveFirmSettings(_: ActionState, fd: FormData): Promise<Ac
   const gstin = text(fd, "gstin")?.toUpperCase().replace(/\s/g, "") ?? null;
   const target = num(fd, "monthly_joining_target");
   const values = {
-    firm_name: text(fd, "firm_name") ?? "Paradigm Shifters",
+    firm_name: text(fd, "firm_name") ?? BRAND_NAME,
     address: text(fd, "address"),
     gstin,
     bank_details: text(fd, "bank_details"),
-    invoice_prefix: text(fd, "invoice_prefix") ?? "PS",
+    invoice_prefix: text(fd, "invoice_prefix") ?? BRAND_SHORT,
     next_invoice_serial: num(fd, "next_invoice_serial") ?? 1,
     gst_rate: num(fd, "gst_rate") ?? 18,
     sac_code: text(fd, "sac_code") ?? "9985",

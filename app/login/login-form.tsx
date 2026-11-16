@@ -3,9 +3,10 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { BRAND_NAME } from "@/lib/brand";
 
 const errors: Record<string, string> = {
-  domain: "That account isn't on the Paradigm Shifters team. Use your @paradigmshifters.in account.",
+  domain: `That account isn't on the ${BRAND_NAME} team. Sign in with the email your admin added.`,
   auth: "Sign-in didn't complete. Please try again.",
 };
 

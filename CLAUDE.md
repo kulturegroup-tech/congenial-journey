@@ -12,6 +12,8 @@ The full spec is the "Paradigm Shifters — Recruitment Platform Build Spec" doc
 - Tailwind v4. Design tokens live in `app/globals.css`; shared UI in `components/ui.tsx` and `components/form.tsx`, so a design pass touches three files
 - Claude API for the agents in phase 3 (not before)
 
+Product name: `lib/brand.ts` reads `NEXT_PUBLIC_BRAND_NAME` (badge `NEXT_PUBLIC_BRAND_SHORT`, sign-in line `NEXT_PUBLIC_BRAND_PLACE`, "-" hides it), default Paradigm Shifters. Never hard-code the name; use `BRAND_NAME`. The same repo can run as a second Vercel project with its own Supabase project and name (a demo for another firm).
+
 Env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (browser-safe), `ALLOWED_EMAIL_DOMAINS`, `ALLOWED_EMAILS`. `SUPABASE_SERVICE_ROLE_KEY` is for import scripts only, never client code. See `.env.example`.
 
 ### Next.js 16 is different from what you remember. Read `AGENTS.md` first.

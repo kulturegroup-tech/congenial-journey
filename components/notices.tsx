@@ -27,7 +27,7 @@ export function NotOnTeam({ email }: { email: string | null }) {
       <Card className="max-w-md px-7 py-6">
         <h2 className="text-lg font-semibold">Almost there</h2>
         <p className="mt-2 text-muted">
-          You&apos;re signed in{email ? ` as ${email}` : ""}, but you haven&apos;t been added to the team yet. Ask Khyati
+          You&apos;re signed in{email ? ` as ${email}` : ""}, but you haven&apos;t been added to the team yet. Ask your admin
           to add you, then refresh this page.
         </p>
         <div className="mt-5">

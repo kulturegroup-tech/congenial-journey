@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "@/components/fast-link";
+import { BRAND_NAME } from "@/lib/brand";
 import { useActionState, useEffect, useState } from "react";
 import { Button, Dialog, Field, Input, Select, SubmitButton, Textarea } from "@/components/form";
 import { formatDate, formatLakhs, formatPqe } from "@/lib/format";
@@ -116,7 +117,7 @@ function ShareForm({ entryId, ctx, onClose, onShared }: { entryId: string; ctx: 
       "CV attached. Happy to set up a call.",
       "",
       "Regards,",
-      "Paradigm Shifters",
+      BRAND_NAME,
     ]
       .filter((l, i, a) => !(l === "" && a[i - 1] === ""))
       .join("\n");
