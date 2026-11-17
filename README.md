@@ -1,23 +1,15 @@
-# Paradigm Shifters — recruitment workspace
+# Covaro — recruitment workspace
 
-Internal app for Paradigm Shifters: one candidate database, mandate tracker, duplicate guard and billing, replacing Odoo and the sheets. Next.js 16 on Netlify, Supabase for the database and sign-in.
+A workspace for legal recruitment firms: one candidate database, mandate tracker, duplicate guard and billing. First built for Paradigm Shifters, replacing Odoo and their sheets. Next.js 16 on Render, Supabase for the database and sign-in.
 
 Building with Claude Code? Start with `CLAUDE.md`.
 
-| | |
-| --- | --- |
-| Live site | https://paradigm-shifters.netlify.app |
-| Netlify site | `paradigm-shifters` (team Kulture) |
-| Supabase project | `paradigm-shifters`, ref `fqsqfxshjedljagxytat`, region Mumbai (`ap-south-1`) |
+| | App | Supabase project |
+| --- | --- | --- |
+| Paradigm Shifters (live, real data) | https://paradigm-shifters.onrender.com (Render, Starter, Singapore) | `paradigm-shifters-live`, ref `jrpekdeeyzlbmyghwlta`, Mumbai |
+| Demo (fake data only) | https://covaro-app.vercel.app | `paradigm-shifters`, ref `fqsqfxshjedljagxytat`, Mumbai |
 
-## Setup status
-
-- [x] Supabase project created; migrations 1–3 and `seed.sql` applied; security advisor checked
-- [x] Netlify site created with `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `ALLOWED_EMAIL_DOMAINS`
-- [ ] Netlify: link the GitHub repo (Project configuration → Build & deploy → Link repository), branch `main`
-- [ ] Supabase → Authentication → URL Configuration: Site URL `https://paradigm-shifters.netlify.app`; Redirect URLs `https://paradigm-shifters.netlify.app/auth/callback` and `http://localhost:3000/auth/callback`
-- [ ] Supabase → Authentication → Providers → Google (optional; email sign-in links work without it). Needs a Google Cloud OAuth client of type "Web application" with redirect URI `https://fqsqfxshjedljagxytat.supabase.co/auth/v1/callback`
-- [ ] First admin added (below)
+**Setting up another firm:** follow `docs/new-firm-setup.md` (about an hour, about $17 a month).
 
 ## Environment variables
 
@@ -29,7 +21,7 @@ Building with Claude Code? Start with `CLAUDE.md`.
 | `ALLOWED_EMAILS` | extra people allowed to sign in, comma-separated (e.g. the developer) |
 | `NEXT_PUBLIC_GOOGLE_SIGNIN` | `on` once Google is enabled in Supabase; until then the Google button is hidden |
 
-Netlify reads these at build time: after changing one, trigger a new deploy.
+Render (and Vercel for the demo) reads these at build time: after changing one, deploy again.
 
 **Email sign-in links:** Supabase's built-in mailer only delivers to members of the Supabase organisation and sends a few emails an hour. For the team to use email links, add custom SMTP in Supabase → Authentication → Emails → SMTP (e.g. Resend or ZeptoMail with a verified paradigmshifters.in sender). Google sign-in needs none of this.
 
@@ -60,10 +52,11 @@ To create a brand-new user with a PIN, use Supabase → Authentication → Users
 Fictional demo data (28 made-up candidates, 9 mandates, placements, reminders, re-engagement alerts) lives in `supabase/demo/`. Every demo row's id starts with `de000000-`.
 
 - Load: run `supabase/demo/demo_data.sql` in the SQL editor (does nothing if already loaded)
-- Remove: run `supabase/demo/remove_demo_data.sql`. **Do this before importing real data.** Real rows are never touched
-- Check both: `node supabase/tests/demo.test.mjs`
+- **Reset after a demo:** `npm run -s demo:reset-sql | pbcopy`, then paste into the demo project's SQL editor and run. It removes every demo row and loads them again with today's dates, and refuses to run where there's no demo data (the live project)
+- Remove: run `supabase/demo/remove_demo_data.sql`. Real rows are never touched
+- Check all three: `npm run test:demo`
 
-Demo data is currently **loaded** in the live project.
+Demo data lives in the demo project only. Never load it into a firm's live project.
 
 ## Database changes
 

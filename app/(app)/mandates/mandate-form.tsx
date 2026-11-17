@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { ButtonLink, Field, FormMessage, Input, Select, SubmitButton, Textarea } from "@/components/form";
 import { Card } from "@/components/ui";
-import { PracticeOptions, type Practice } from "@/components/practice";
+import { PracticePicker, type Practice } from "@/components/practice";
 import { CITIES } from "@/lib/constants";
 import { saveMandate } from "./actions";
 
@@ -13,6 +13,7 @@ export type MandateValues = {
   title?: string;
   role_category?: string;
   practice_area?: string | null;
+  practice_areas?: string[];
   pqe_min?: number | null;
   pqe_max?: number | null;
   grade_label?: string | null;
@@ -65,12 +66,6 @@ export function MandateForm({
         <Field label="Title *" hint="The role in the client's words.">
           <Input name="title" required defaultValue={v.title ?? ""} placeholder="TMT associate" autoFocus={!v.id} />
         </Field>
-        <Field label="Practice area">
-          <Select name="practice_area" defaultValue={v.practice_area ?? ""}>
-            <option value="">—</option>
-            <PracticeOptions practices={practices} current={v.practice_area} />
-          </Select>
-        </Field>
         <Field label="City">
           <Input name="city" list="mandate-cities" defaultValue={v.city ?? ""} autoComplete="off" />
           <datalist id="mandate-cities">
@@ -119,6 +114,16 @@ export function MandateForm({
             ))}
           </Select>
         </Field>
+      </Card>
+
+      <Card className="p-5">
+        <p className="mb-1.5 text-[13px] font-medium text-ink/80">Practice areas</p>
+        <p className="mb-2 text-[12px] text-muted">Pick one or more. Past candidates in any of them show up as suggested.</p>
+        <PracticePicker
+          practices={practices}
+          name="practice_areas"
+          defaultValue={v.practice_areas?.length ? v.practice_areas : v.practice_area ? [v.practice_area] : []}
+        />
       </Card>
 
       <Card className="p-5">

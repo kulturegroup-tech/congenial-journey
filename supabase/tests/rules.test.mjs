@@ -150,6 +150,25 @@ const notes = await q(`select recipient_id, title from notifications where manda
 ok(notes.find(n => n.title.startsWith('Asha')).recipient_id === R2, 'alert goes to the recruiter who spoke to them');
 ok(notes.find(n => n.title.startsWith('Bharat')).recipient_id === R1, 'no call on record: alert goes to the mandate owner');
 
+console.log('\nSeveral practice areas on a mandate');
+{
+  ok((await one(`select practice_areas from mandates where id = $1`, [M])).practice_areas.join() === 'Technology Transactions',
+     'a mandate given one area gets it in its list too');
+  await id(`insert into candidates (full_name, practice_areas, practice_start_date, current_city)
+    values ('Gita Privacy', '{"Data Privacy and Cybersecurity"}', ${ago(3)}, 'Bengaluru')`);
+  const M3 = await id(`insert into mandates (client_id, title, practice_areas, pqe_min, pqe_max, city, owner_id)
+    values ($1, 'Tech and privacy associate', '{"Technology Transactions","Data Privacy and Cybersecurity","Technology Transactions"}', 2, 4, 'Bengaluru', $2)`, [client, R1]);
+  const m3 = await one(`select practice_area, practice_areas from mandates where id = $1`, [M3]);
+  ok(m3.practice_area === 'Technology Transactions' && m3.practice_areas.length === 2, 'the first area is the main one; repeats are dropped');
+  const g = (await q(`select * from match_candidates_for_mandate($1)`, [M3])).find((r) => r.full_name === 'Gita Privacy');
+  ok(g && g.reasons.includes('Practice: Data Privacy and Cybersecurity'), 'a candidate fits on any of the mandate’s areas');
+  ok(!(await q(`select * from match_candidates_for_mandate($1)`, [M])).some((r) => r.full_name === 'Gita Privacy'), '…and not on a mandate without that area');
+  await q(`update mandates set practice_area = 'M&A' where id = $1`, [M3]);
+  ok((await one(`select practice_areas from mandates where id = $1`, [M3])).practice_areas.join() === 'M&A', 'setting only the single area (an import) resets the list to it');
+  await fails(`update mandates set practice_areas = '{"Made-up practice"}' where id = '${M3}'`, /Unknown practice area/, 'an area that isn’t on the list is refused');
+  await q(`update mandates set status = 'lost' where id = $1`, [M3]);
+}
+
 console.log('\nPipeline and duplicate guard');
 const eA = await id(`insert into pipeline_entries (candidate_id, mandate_id) values ($1, $2)`, [A, M]);
 await q(`insert into screening_calls (candidate_id, mandate_id, outcome) values ($1, $2, 'fit')`, [A, M]);
@@ -240,11 +259,13 @@ await q(`update invoices set status = 'cancelled' where id = $1`, [invFy.id]);
 await fails(`select create_invoice($1, today_ist())`, /falls in financial year/, 'cannot backdate into a year the series has left', [PFy]);
 
 console.log('\nReplacement');
+await q(`update mandates set practice_areas = '{"Technology Transactions","Data Privacy and Cybersecurity"}' where id = $1`, [M]);
 await q(`update placements set status = 'left_in_window', left_on = today_ist(), left_reason = 'Moved firms' where id = $1`, [P]);
 const rp = await one(`select replacement_mandate_id from placements where id = $1`, [P]);
 ok(rp.replacement_mandate_id, 'leaving inside the window opens a linked replacement mandate');
-const rm = await one(`select title, replaces_placement_id from mandates where id = $1`, [rp.replacement_mandate_id]);
+const rm = await one(`select title, replaces_placement_id, practice_areas from mandates where id = $1`, [rp.replacement_mandate_id]);
 ok(rm.title.startsWith('Replacement:') && rm.replaces_placement_id === P, 'replacement mandate points back to the placement');
+ok(rm.practice_areas.length === 2, 'replacement mandate keeps all the practice areas');
 await db.exec(`select set_config('app.bypass_guards', 'on', false)`);  // fixture shortcut: straight to offer
 const eF = await id(`insert into pipeline_entries (candidate_id, mandate_id, stage) values ($1, $2, 'offer')`, [B, rp.replacement_mandate_id]);
 const P3 = await id(`insert into placements (pipeline_entry_id, joining_date, annual_fixed_salary, status) values ($1, today_ist(), 2000000, 'joined')`, [eF]);

@@ -84,4 +84,19 @@ ok((await one(`select count(*)::int n from auth.users`)).n === 1, 'real login ke
 ok((await one(`select count(*)::int n from exit_reasons`)).n === 13, 'seed lists kept');
 await db.exec(fs.readFileSync(`${repo}/supabase/demo/remove_demo_data.sql`, 'utf8'));
 ok(true, 'cleanup is safe to run twice');
+
+// The one-step reset (scripts/demo-reset.mjs): refused where there's no demo data, a full reload where there is.
+const { resetSql } = await import(`${repo}/scripts/demo-reset.mjs`);
+let refused = false;
+try { await db.exec(resetSql()); } catch (e) { refused = /not the demo database/.test(e.message); }
+ok(refused && (await one(`select count(*)::int n from candidates`)).n === 0, 'reset refuses a database without demo data (the live one) and changes nothing');
+await db.exec(demo);
+await db.exec(`update candidates set notes = 'Scribbled on during a demo' where id = 'de000000-0000-4000-8000-000000000501'`);
+await db.exec(`delete from mandates where id = 'de000000-0000-4000-8000-000000000609'`);
+await db.exec(resetSql());
+const after = await one(`select (select count(*) from candidates where id::text like 'de000000-%')::int c,
+  (select count(*) from v_mandate_board where status in ('active','on_hold'))::int m,
+  (select notes from candidates where id = 'de000000-0000-4000-8000-000000000501') n`);
+ok(after.m === 7 && after.c === 28 && after.n === null, 'reset brings back every demo row as it was (28 candidates, 7 open mandates, demo edits gone)');
+ok((await one(`select count(*)::int n from team_members where id = '00000000-0000-0000-0000-0000000000aa'`)).n === 1, 'reset keeps the real admin');
 console.log(`\nAll ${passed} demo checks passed.`);

@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test:db": "node supabase/tests/rules.test.mjs",
+    "test:demo": "node supabase/tests/demo.test.mjs",
+    "demo:reset-sql": "node scripts/demo-reset.mjs",
     "test:app": "node --no-warnings tests/today.test.mjs && node --no-warnings tests/forms.test.mjs && node --no-warnings tests/session.test.mjs"
   },
   "dependencies": {

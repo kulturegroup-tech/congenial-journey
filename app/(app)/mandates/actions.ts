@@ -33,7 +33,8 @@ export async function saveMandate(_: ActionState, fd: FormData): Promise<ActionS
     client_id: clientId,
     title,
     role_category: (text(fd, "role_category") ?? "legal") as RoleCategory,
-    practice_area: text(fd, "practice_area"),
+    // All the areas picked, in order; the database keeps practice_area as the first.
+    practice_areas: all(fd, "practice_areas"),
     pqe_min: pqeMin,
     pqe_max: pqeMax,
     grade_label: text(fd, "grade_label"),

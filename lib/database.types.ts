@@ -994,6 +994,7 @@ export type Database = {
           pqe_max: number | null
           pqe_min: number | null
           practice_area: string | null
+          practice_areas: string[]
           received_on: string
           reopened_count: number
           replaces_placement_id: string | null
@@ -1023,6 +1024,7 @@ export type Database = {
           pqe_max?: number | null
           pqe_min?: number | null
           practice_area?: string | null
+          practice_areas?: string[]
           received_on?: string
           reopened_count?: number
           replaces_placement_id?: string | null
@@ -1052,6 +1054,7 @@ export type Database = {
           pqe_max?: number | null
           pqe_min?: number | null
           practice_area?: string | null
+          practice_areas?: string[]
           received_on?: string
           reopened_count?: number
           replaces_placement_id?: string | null
@@ -1865,6 +1868,7 @@ export type Database = {
           pqe_max: number | null
           pqe_min: number | null
           practice_area: string | null
+          practice_areas: string[] | null
           received_on: string | null
           status: Database["public"]["Enums"]["mandate_status"] | null
           title: string | null

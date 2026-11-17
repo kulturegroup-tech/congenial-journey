@@ -24,6 +24,7 @@ type BoardRow = {
   client: string;
   city: string | null;
   practice_area: string | null;
+  practice_areas: string[] | null;
   pqe_min: number | null;
   pqe_max: number | null;
   grade_label: string | null;
@@ -137,7 +138,11 @@ async function MandateBoard({ searchParams }: { searchParams: SP }) {
               </Link>
               <div className="text-muted">
                 {m.title}
-                {m.practice_area ? ` · ${m.practice_area}` : ""}
+                {m.practice_areas?.length
+                  ? ` · ${m.practice_areas[0]}${m.practice_areas.length > 1 ? ` +${m.practice_areas.length - 1}` : ""}`
+                  : m.practice_area
+                    ? ` · ${m.practice_area}`
+                    : ""}
               </div>
             </td>
             <td>{m.city ?? "—"}</td>

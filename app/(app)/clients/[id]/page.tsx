@@ -27,15 +27,17 @@ const roleLabel: Record<string, string> = { partner: "Partner", hr_ta: "HR / TA"
 async function ClientScreen({ params }: { params: Params }) {
   const { id } = await params;
   const supabase = await createClient();
-  const [cq, contacts, agreements, mandates, live, team] = await Promise.all([
+  const [cq, contacts, agreements, mandates, live, team, firm] = await Promise.all([
     supabase.from("clients").select("*, firms(name, kind, aliases)").eq("id", id).maybeSingle(),
     supabase.from("client_contacts").select("*").eq("client_id", id).order("role").order("name"),
     supabase.from("agreements").select("*, agreement_fee_rates(role_category, fee_percent)").eq("client_id", id).order("starts_on", { ascending: false }),
     supabase.from("v_mandate_board").select("*").eq("client_id", id).order("received_on", { ascending: false }),
     supabase.from("v_live_submissions").select("*").eq("client_id", id).order("shared_at", { ascending: false }),
     getTeamNames(),
+    supabase.from("settings").select("home_state_code").maybeSingle(),
   ]);
   const c = cq.data;
+  const home = firm.data?.home_state_code ?? "27";
   if (!c) notFound();
 
   const ags: (Agreement & { document_path: string | null })[] = (agreements.data ?? []).map((a) => ({
@@ -161,7 +163,7 @@ async function ClientScreen({ params }: { params: Params }) {
                         <Link href={`/mandates/${m.id}`} className="font-medium hover:text-accent">
                           {m.title}
                         </Link>
-                        <div className="text-[12px] text-muted">{[m.city, m.practice_area].filter(Boolean).join(" · ")}</div>
+                        <div className="text-[12px] text-muted">{[m.city, m.practice_areas?.length ? m.practice_areas.join(", ") : m.practice_area].filter(Boolean).join(" · ")}</div>
                       </td>
                       <td className="whitespace-nowrap">{formatPqeRange(m.pqe_min, m.pqe_max, m.grade_label)}</td>
                       <td>{m.owner_id ? team[m.owner_id] ?? "—" : "—"}</td>
@@ -247,7 +249,7 @@ async function ClientScreen({ params }: { params: Params }) {
                 <dt className="text-muted">GSTIN</dt>
                 <dd className="font-mono">{c.gstin ?? "—"}</dd>
                 <dt className="text-muted">Tax</dt>
-                <dd>{c.gstin ? (c.gstin.startsWith("27") ? "CGST + SGST (Maharashtra)" : "IGST") : "Add GSTIN to invoice"}</dd>
+                <dd>{c.gstin ? (c.gstin.startsWith(home) ? "CGST + SGST (same state as you)" : "IGST (another state)") : "Add GSTIN to invoice"}</dd>
                 <dt className="text-muted">Address</dt>
                 <dd className="whitespace-pre-wrap">{c.billing_address ?? "—"}</dd>
               </dl>

@@ -109,7 +109,7 @@ export function FirmForm({ s, canEdit }: { s: FirmSettings; canEdit: boolean }) 
           <Field label="Firm name">
             <Input name="firm_name" defaultValue={s.firm_name} />
           </Field>
-          <Field label="GSTIN">
+          <Field label="GSTIN" hint="Its first two digits are your state: clients in the same state are billed CGST + SGST, others IGST.">
             <Input name="gstin" defaultValue={s.gstin ?? ""} className="font-mono uppercase" maxLength={15} />
           </Field>
           <Field label="Address (printed on invoices)">

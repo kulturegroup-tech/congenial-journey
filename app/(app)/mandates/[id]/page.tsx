@@ -112,7 +112,7 @@ async function MandateScreen({ params }: { params: Params }) {
         back={{ href: "/mandates", label: "Mandates" }}
         description={
           <>
-            {[m.city, m.practice_area, formatPqeRange(m.pqe_min, m.pqe_max, m.grade_label), m.role_category === "support_staff" ? "Support staff" : null, m.headcount > 1 ? `${m.headcount} openings` : null]
+            {[m.city, m.practice_areas.length ? m.practice_areas.join(", ") : m.practice_area, formatPqeRange(m.pqe_min, m.pqe_max, m.grade_label), m.role_category === "support_staff" ? "Support staff" : null, m.headcount > 1 ? `${m.headcount} openings` : null]
               .filter((x) => x && x !== "—")
               .join(" · ")}
             <span className="mt-1 block text-[13.5px]">

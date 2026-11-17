@@ -48,8 +48,12 @@ export async function changeMyPin(_: ActionState, fd: FormData): Promise<ActionS
 export async function saveFirmSettings(_: ActionState, fd: FormData): Promise<ActionState> {
   const supabase = await createClient();
   const gstin = text(fd, "gstin")?.toUpperCase().replace(/\s/g, "") ?? null;
+  if (gstin && !/^[0-9]{2}[A-Z0-9]{13}$/.test(gstin)) return { error: "GSTIN should be 15 characters and start with the 2-digit state code." };
   const target = num(fd, "monthly_joining_target");
   const values = {
+    // The firm's own state (first two digits of its GSTIN) decides the tax split on invoices:
+    // a client in the same state pays CGST + SGST, anyone else IGST.
+    ...(gstin ? { home_state_code: gstin.slice(0, 2) } : {}),
     firm_name: text(fd, "firm_name") ?? BRAND_NAME,
     address: text(fd, "address"),
     gstin,
