@@ -4,7 +4,7 @@
 # The two NEXT_PUBLIC values are browser-safe by design (row-level security protects the data).
 services:
   - type: web
-    name: paradigm-shifters
+    name: covaro-paradigm
     runtime: node
     region: singapore
     plan: starter
