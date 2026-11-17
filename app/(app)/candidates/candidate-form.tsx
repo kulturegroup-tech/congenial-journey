@@ -5,6 +5,7 @@ import { ButtonLink, Field, FormMessage, Input, Select, SubmitButton, Textarea }
 import { Card } from "@/components/ui";
 import { CITIES } from "@/lib/constants";
 import { saveCandidate } from "./actions";
+import { PracticePicker, type Practice } from "@/components/practice";
 
 export type CandidateValues = {
   id?: string;
@@ -36,7 +37,7 @@ export function CandidateForm({
   team,
 }: {
   values: CandidateValues;
-  practices: string[];
+  practices: Practice[];
   firms: string[];
   team: { id: string; full_name: string }[];
 }) {
@@ -87,14 +88,7 @@ export function CandidateForm({
 
       <Card className="p-5">
         <p className="mb-2 text-[13px] font-medium">Practice areas</p>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 md:grid-cols-4">
-          {practices.map((p) => (
-            <label key={p} className="flex items-center gap-2 text-[13px]">
-              <input type="checkbox" name="practice_areas" value={p} defaultChecked={values.practice_areas?.includes(p)} />
-              {p}
-            </label>
-          ))}
-        </div>
+        <PracticePicker practices={practices} name="practice_areas" defaultValue={values.practice_areas ?? []} />
       </Card>
 
       {isNew ? (
@@ -142,10 +136,17 @@ export function CandidateForm({
             ))}
           </Select>
         </Field>
-        <Field label="Note">
-          <Textarea name="review_note" rows={1} defaultValue={values.review_note ?? ""} />
-        </Field>
+        {/* The short internal flag (import review, "Demo data") rides along unchanged. Notes have their own box. */}
+        <input type="hidden" name="review_note" value={values.review_note ?? ""} />
       </Card>
+
+      {isNew ? (
+        <Card className="p-5">
+          <Field label="Notes" hint="Paste the call notes or anything worth remembering. You can add more on their profile later.">
+            <Textarea name="notes" rows={6} className="text-[13.5px] leading-relaxed" />
+          </Field>
+        </Card>
+      ) : null}
 
       <div className="flex gap-2">
         <SubmitButton>{isNew ? "Add candidate" : "Save changes"}</SubmitButton>

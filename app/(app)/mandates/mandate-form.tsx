@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { ButtonLink, Field, FormMessage, Input, Select, SubmitButton, Textarea } from "@/components/form";
 import { Card } from "@/components/ui";
+import { PracticeOptions, type Practice } from "@/components/practice";
 import { CITIES } from "@/lib/constants";
 import { saveMandate } from "./actions";
 
@@ -37,7 +38,7 @@ export function MandateForm({
 }: {
   values: MandateValues;
   clients: { id: string; display_name: string }[];
-  practices: string[];
+  practices: Practice[];
   team: { id: string; full_name: string }[];
   grades: string[];
 }) {
@@ -67,9 +68,7 @@ export function MandateForm({
         <Field label="Practice area">
           <Select name="practice_area" defaultValue={v.practice_area ?? ""}>
             <option value="">—</option>
-            {practices.map((p) => (
-              <option key={p}>{p}</option>
-            ))}
+            <PracticeOptions practices={practices} current={v.practice_area} />
           </Select>
         </Field>
         <Field label="City">

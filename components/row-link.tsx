@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, type ElementType, type MouseEvent, type PointerEvent, type ReactNode } from "react";
+import { useRef, type DragEvent, type ElementType, type MouseEvent, type PointerEvent, type ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
 import { navigateTo } from "@/components/nav-progress";
 
@@ -22,16 +22,24 @@ export function RowLink({
   className,
   children,
   onContextMenu,
+  draggable,
+  onDragStart,
+  onDragEnd,
 }: {
   href: string;
   as?: ElementType;
   className?: string;
   children: ReactNode;
   onContextMenu?: (e: MouseEvent) => void;
+  /** For cards that can also be dragged (the mandate board). A finished drag never counts as a click. */
+  draggable?: boolean;
+  onDragStart?: (e: DragEvent) => void;
+  onDragEnd?: (e: DragEvent) => void;
 }) {
   const router = useRouter();
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const fetchedAt = useRef(0);
+  const draggedAt = useRef(0);
 
   const prefetch = () => {
     if (Date.now() - fetchedAt.current < 30_000) return;
@@ -45,6 +53,15 @@ export function RowLink({
     <Tag
       className={className ? `row-link ${className}` : "row-link"}
       onContextMenu={onContextMenu}
+      draggable={draggable}
+      onDragStart={(e: DragEvent) => {
+        draggedAt.current = Date.now();
+        onDragStart?.(e);
+      }}
+      onDragEnd={(e: DragEvent) => {
+        draggedAt.current = Date.now();
+        onDragEnd?.(e);
+      }}
       onPointerEnter={(e: PointerEvent) => {
         if (e.pointerType !== "mouse") return;
         clearTimeout(timer.current);
@@ -56,6 +73,7 @@ export function RowLink({
       }}
       onClick={(e: MouseEvent) => {
         if (e.defaultPrevented || e.button !== 0 || ownClick(e)) return;
+        if (Date.now() - draggedAt.current < 400) return;
         if (window.getSelection()?.toString()) return;
         if (e.metaKey || e.ctrlKey || e.shiftKey) {
           window.open(href, "_blank", "noopener");

@@ -1,6 +1,6 @@
 "use server";
 
-import { refresh } from "next/cache";
+import { refreshAll } from "@/lib/refresh";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { bool, dbError, num, text, type ActionState } from "@/lib/forms";
@@ -54,7 +54,7 @@ export async function saveClient(_: ActionState, fd: FormData): Promise<ActionSt
     const err = await writeAgreement(supabase, fd, res.data.id, null, today);
     if (err) return { error: `Client saved, but the agreement wasn't: ${err} Add it from the client's page.`, id: res.data.id };
   }
-  refresh();
+  refreshAll();
   redirect(`/clients/${res.data.id}`);
 }
 
@@ -75,7 +75,7 @@ export async function saveContact(_: ActionState, fd: FormData): Promise<ActionS
   };
   const { error } = id ? await supabase.from("client_contacts").update(row).eq("id", id) : await supabase.from("client_contacts").insert(row);
   if (error) return { error: dbError(error) };
-  refresh();
+  refreshAll();
   return { ok: true, message: "Saved." };
 }
 
@@ -84,7 +84,7 @@ export async function deleteContact(id: string) {
   const { error, count } = await supabase.from("client_contacts").delete({ count: "exact" }).eq("id", id);
   if (error) return { error: dbError(error) };
   if (!count) return { error: "Only an admin can delete." };
-  refresh();
+  refreshAll();
   return { ok: true };
 }
 
@@ -134,7 +134,7 @@ export async function saveAgreement(_: ActionState, fd: FormData): Promise<Actio
   const { supabase } = await me();
   const err = await writeAgreement(supabase, fd, text(fd, "client_id")!, text(fd, "id"));
   if (err) return { error: err };
-  refresh();
+  refreshAll();
   return { ok: true, message: "Agreement saved." };
 }
 
@@ -142,7 +142,7 @@ export async function attachAgreementFile(agreementId: string, path: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("agreements").update({ document_path: path }).eq("id", agreementId);
   if (error) return { error: dbError(error) };
-  refresh();
+  refreshAll();
   return { ok: true };
 }
 

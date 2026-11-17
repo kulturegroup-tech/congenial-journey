@@ -24,25 +24,5 @@ insert into exit_reasons (code, label, sort) values
   ('mandate_closed',             'Mandate closed',                     130)
 on conflict (code) do nothing;
 
--- Aliases are the short forms used in Odoo job positions and sheet tabs, so imports map cleanly.
-insert into practice_areas (name, aliases, sort) values
-  ('General Corporate',            '{GC,Corporate,Corp,"Corporate & Commercial"}', 10),
-  ('M&A',                          '{"Mergers & Acquisitions"}',                   20),
-  ('PE/VC',                        '{"Private Equity","Venture Capital",PE,VC}',   30),
-  ('Banking & Finance',            '{B&F,Banking,Finance,BF}',                     40),
-  ('Capital Markets',              '{ECM,DCM,"Capital Market"}',                   50),
-  ('Funds',                        '{"Investment Funds",AIF}',                     60),
-  ('TMT',                          '{Tech,Technology,"Technology, Media & Telecom"}', 70),
-  ('Data Protection',              '{Privacy,"Data Privacy"}',                     80),
-  ('Disputes',                     '{Litigation,"Dispute Resolution"}', 90),
-  ('Arbitration',                  '{"International Arbitration"}',               100),
-  ('White Collar',                 '{"White Collar Crime",Investigations}',       110),
-  ('Real Estate',                  '{"Land Due Diligence","Real estate transaction",RE}', 120),
-  ('Energy & Infrastructure',      '{"Energy & Infra",Infra,Projects,E&I}',       130),
-  ('Competition',                  '{Antitrust,"Competition Law"}',               140),
-  ('Tax',                          '{"Direct Tax","Indirect Tax",GST}',           150),
-  ('Employment',                   '{Labour,"Employment & Labour"}',              160),
-  ('Intellectual Property',        '{IP,IPR}',                                    170),
-  ('Insolvency & Restructuring',   '{IBC,Restructuring,Insolvency}',             180),
-  ('Regulatory',                   '{"Regulatory & Policy",Policy}',             190)
-on conflict (name) do nothing;
+-- Practice areas: the list (99 areas in groups, with the short forms used in Odoo as aliases) is in
+-- migration 20261117000010_notes_and_practice_areas.sql, so it reaches existing databases too.

@@ -4,10 +4,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
 import { Button, Input, Select } from "@/components/form";
 import { CITIES } from "@/lib/constants";
+import { PracticeOptions, type Practice } from "@/components/practice";
 
 type F = { q: string; practice: string; city: string; seniority: string; min: string; max: string };
 
-export function CandidateFilters({ practices, initial }: { practices: string[]; initial: F }) {
+export function CandidateFilters({ practices, initial }: { practices: Practice[]; initial: F }) {
   const router = useRouter();
   const pathname = usePathname();
   const [f, setF] = useState<F>(initial);
@@ -38,9 +39,7 @@ export function CandidateFilters({ practices, initial }: { practices: string[]; 
       />
       <Select value={f.practice} onChange={(e) => set("practice")(e.target.value)} className="w-48">
         <option value="">All practice areas</option>
-        {practices.map((p) => (
-          <option key={p}>{p}</option>
-        ))}
+        <PracticeOptions practices={practices} current={f.practice} />
       </Select>
       <Select value={f.city} onChange={(e) => set("city")(e.target.value)} className="w-36">
         <option value="">All cities</option>

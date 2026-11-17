@@ -5,6 +5,7 @@ import { Button, Dialog, Field, FormMessage, Input, Select, SubmitButton } from 
 import { createClient } from "@/lib/supabase/client";
 import { openFile } from "@/lib/open-file";
 import { useToast } from "@/components/toast";
+import { PracticeOptions, type Practice } from "@/components/practice";
 import { CITIES } from "@/lib/constants";
 import type { ActionState } from "@/lib/forms";
 import {
@@ -135,7 +136,7 @@ export function AddContact({ candidateId }: { candidateId: string }) {
   );
 }
 
-export function AddInterest({ candidateId, firms, practices }: { candidateId: string; firms: string[]; practices: string[] }) {
+export function AddInterest({ candidateId, firms, practices }: { candidateId: string; firms: string[]; practices: Practice[] }) {
   return (
     <Dialog title="What they want" trigger={(open) => <Button size="sm" variant="ghost" onClick={open}>+ Add</Button>}>
       {(close) => (
@@ -162,9 +163,7 @@ export function AddInterest({ candidateId, firms, practices }: { candidateId: st
             <Field label="Practice area">
               <Select name="practice" defaultValue="">
                 <option value="">Any</option>
-                {practices.map((p) => (
-                  <option key={p}>{p}</option>
-                ))}
+                <PracticeOptions practices={practices} />
               </Select>
             </Field>
           </div>
@@ -313,20 +312,35 @@ export function CvOpen({ fileId, name }: { fileId: string; name: string }) {
   );
 }
 
-export function CallNotes({ notes }: { notes: [string, string | null][] }) {
+/**
+ * A call's answers. Short ones sit beside their label; long ones (a pasted call record) get the
+ * full width, so they read like the notes they are instead of a narrow column.
+ */
+export function CallNotes({ notes, open = false, plain = false }: { notes: [string, string | null][]; open?: boolean; plain?: boolean }) {
   const shown = notes.filter(([, v]) => v);
   if (!shown.length) return null;
-  return (
-    <details className="mt-2">
-      <summary className="cursor-pointer text-[13px] text-accent">Call notes</summary>
-      <dl className="mt-2 grid gap-x-4 gap-y-2 text-[13px] md:grid-cols-[180px_1fr]">
-        {shown.map(([k, v]) => (
+  const list = (
+    <dl className="mt-2 grid gap-x-4 gap-y-2 text-[13px] md:grid-cols-[150px_1fr]">
+      {shown.map(([k, v]) =>
+        (v ?? "").length > 160 || (v ?? "").includes("\n") ? (
+          <div key={k} className="md:col-span-2">
+            <dt className="mb-0.5 text-muted">{k}</dt>
+            <dd className="whitespace-pre-wrap break-words leading-relaxed">{v}</dd>
+          </div>
+        ) : (
           <div key={k} className="contents">
             <dt className="text-muted">{k}</dt>
-            <dd className="whitespace-pre-wrap">{v}</dd>
+            <dd className="whitespace-pre-wrap break-words">{v}</dd>
           </div>
-        ))}
-      </dl>
+        ),
+      )}
+    </dl>
+  );
+  if (plain) return list;
+  return (
+    <details className="mt-2" open={open}>
+      <summary className="cursor-pointer text-[13px] text-accent">Call notes</summary>
+      {list}
     </details>
   );
 }

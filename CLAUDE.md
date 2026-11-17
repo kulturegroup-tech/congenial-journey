@@ -6,10 +6,10 @@ The full spec is the "Paradigm Shifters — Recruitment Platform Build Spec" doc
 
 ## Stack
 
-- The product is **Covaro**. Two deployments of this one repo, both on Vercel (team kulture4), both redeploy on every push to `main`, functions in Mumbai (`vercel.json`):
-  - **Paradigm Shifters (live, real data):** Vercel project `paradigmshifters`, https://paradigmshifters.vercel.app → Supabase project `paradigm-shifters-live` (ref `jrpekdeeyzlbmyghwlta`, Mumbai). Team: Khyati (admin), Kumar, Kopal. Keep-awake cron runs here.
-  - **Demo (fake data):** Vercel project `covaro-demo` → Supabase project `paradigm-shifters` (ref `fqsqfxshjedljagxytat`), which holds the demo data from `supabase/demo/`. Priyanshi signs in there as admin. Never put real data in it.
-  - Migrations 1–9 are applied on the live project; 1–6 on the demo one. Apply new migrations to **both**, live first, in order.
+- The product is **Covaro**. Deployments of this one repo, each redeploying on every push to `main`:
+  - **Paradigm Shifters (live, real data):** Render web service (Starter, Singapore, always on), https://paradigm-shifters.onrender.com (its settings are in `render.yaml`) → Supabase project `paradigm-shifters-live` (ref `jrpekdeeyzlbmyghwlta`, Mumbai). Team: Khyati (admin), Kumar, Kopal. The old Vercel copy (`paradigmshifters.vercel.app`, team kulture4) points at the same database and is to be deleted.
+  - **Demo (fake data):** Vercel project `covaro-demo` (moving to Netlify) → Supabase project `paradigm-shifters` (ref `fqsqfxshjedljagxytat`), which holds the demo data from `supabase/demo/`. Priyanshi signs in there as admin. Never put real data in it.
+  - Migrations 1–10 are applied on the live project. The demo has 1–8 and 10: migration 9 (keep-awake) is live-only. Apply new migrations to **both**, live first, in order.
   - The old Netlify site is no longer used
 - Supabase: Postgres, Auth (Google sign-in + email links), Storage (private buckets), cron + edge functions
 - Tailwind v4. Design tokens live in `app/globals.css`; shared UI in `components/ui.tsx` and `components/form.tsx`, so a design pass touches three files
@@ -98,7 +98,8 @@ Supabase runs API calls with safeupdate on: an `UPDATE` or `DELETE` without `WHE
 - Phones: stored E.164 (`+919000000001`), one person per number. Use `normalize_phones()` on input.
 - LinkedIn: store the URL; `linkedin_slug` is generated and unique.
 - Firms: one row per organisation, with `aliases` ("AZB" / "AZB & Partners"). Match typed firm names against name and aliases before creating a new firm.
-- Practice areas: pick from the `practice_areas` table, never free text.
+- Practice areas: pick from the `practice_areas` table, never free text. Khyati's list (99 areas, migration 10), each in a `category` for the pickers: `PracticeOptions` (grouped `<option>`s) and `PracticePicker` (search + tick, several) in `components/practice.tsx`. The older broad areas are `active = false`; records that use one keep it, and the pickers still show it on them.
+- Candidate notes: `candidates.notes` is one big free-text box per candidate for pasted call records, edited on the profile (`app/(app)/candidates/[id]/notes.tsx`). Saves check `notes_updated_at`, so a teammate's save is never overwritten. The call form shows earlier calls and these notes beside it.
 - Files: private buckets only (`candidate-files`, `agreements`, `invoices`), opened through signed URLs.
 
 ## Phase 1 scope (weeks 1–3): replace the sheets
@@ -124,7 +125,8 @@ Phase 2 (still to do): invoice PDF stored in the `invoices` bucket, reminder ema
 
 ### Where things live in the app
 
-- `app/(app)/<section>/actions.ts`: Server Actions for that section. They call the database and `refresh()`; business rules stay in Postgres
+- `app/(app)/<section>/actions.ts`: Server Actions for that section. They call the database and then `refreshAll()` from `lib/refresh.ts`, never `refresh()` alone: plain `refresh()` left pages fetched ahead on hover showing data from before the save (a candidate added to a mandate didn't show until a reload). Business rules stay in Postgres
+- `components/fresh-on-return.tsx`: coming back to a tab after 15 s away re-reads the data on screen, so another tab's or a teammate's change shows without a reload
 - `lib/forms.ts` (reading FormData, `dbError`), `components/form.tsx` (inputs, `Dialog`, `SubmitButton`), `lib/data/options.ts` (cached lists for selects)
 - Inserts into `cv_shares` and `placements` pass placeholder ids for `candidate_id`, `client_id`, `mandate_id` (and `valid_until`); the BEFORE triggers fill them from the pipeline entry
 
@@ -141,7 +143,7 @@ Phase 2 (still to do): invoice PDF stored in the `invoices` bucket, reminder ema
 
 - **LinkedIn: no automation of any kind.** No scraping, auto-messaging or browser bots. Khyati's account has been blocked before. Store URLs only.
 - Candidate data is personal data under India's DPDP Act, and client agreements make candidate pay and submissions confidential. Never log personal data to the console or analytics. Never send it to any third-party service except the Claude API in phase 3.
-- Keep-awake: migration 9 schedules `pg_cron` + `pg_net` to open `/warm` (`app/warm/page.tsx`, public in `proxy.ts`) every 5 minutes, Mon–Sat 08:30–21:30 IST, so Vercel's free plan doesn't sleep. It sends nothing and reads nothing.
+- Keep-awake: migration 9 schedules `pg_cron` + `pg_net` to open `/warm` (`app/warm/page.tsx`, public in `proxy.ts`) every 5 minutes, Mon–Sat 08:30–21:30 IST, so Vercel's free plan doesn't sleep. It sends nothing and reads nothing. It still pings the old Vercel address; Render doesn't sleep, so it is due to be switched off (`cron.unschedule('keep-app-awake')`) once Priyanshi approves. `/warm` stays as Render's health check.
 - The only other outside call is the Mumbai weather check (`lib/weather.ts`, MET Norway, June to mid-October, cached hourly). It sends a city's coordinates and nothing else; keep it that way.
 - RLS stays on for every table. Never use the service role key in the browser.
 - Only admins delete. Prefer status changes and exits over deletes.

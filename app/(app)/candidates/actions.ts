@@ -1,6 +1,6 @@
 "use server";
 
-import { refresh } from "next/cache";
+import { refreshAll } from "@/lib/refresh";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { all, dbError, json, lakhs, linkedinSlug, list, moneyProblem, num, text, type ActionState } from "@/lib/forms";
@@ -67,7 +67,7 @@ export async function saveCandidate(_: ActionState, fd: FormData): Promise<Actio
   if (id) {
     const { error } = await supabase.from("candidates").update(row).eq("id", id);
     if (error) return { error: dbError(error) };
-    refresh();
+    refreshAll();
     redirect(`/candidates/${id}`);
   }
 
@@ -94,7 +94,12 @@ export async function saveCandidate(_: ActionState, fd: FormData): Promise<Actio
   if (byEmail) return { error: `This email already belongs to ${byEmail.candidates?.full_name}.`, duplicateId: byEmail.candidate_id };
   if (byLinkedin) return { error: `${byLinkedin.full_name} already has this LinkedIn profile.`, duplicateId: byLinkedin.id };
 
-  const { data: created, error } = await supabase.from("candidates").insert(row).select("id").single();
+  const notes = text(fd, "notes");
+  const { data: created, error } = await supabase
+    .from("candidates")
+    .insert({ ...row, notes, notes_updated_at: notes ? new Date().toISOString() : null, notes_updated_by: notes ? userId : null })
+    .select("id")
+    .single();
   if (error || !created) return { error: dbError(error) };
 
   const phoneSource = text(fd, "phone_source") === "weekday" ? "weekday" : "manual";
@@ -108,7 +113,7 @@ export async function saveCandidate(_: ActionState, fd: FormData): Promise<Actio
     const { error: e } = await supabase.from("candidate_emails").insert(emails.map((email, i) => ({ candidate_id: created.id, email, is_primary: i === 0 })));
     if (e) return { error: dbError(e), duplicateId: created.id };
   }
-  refresh();
+  refreshAll();
   redirect(`/candidates/${created.id}`);
 }
 
@@ -128,7 +133,7 @@ export async function addPhone(_: ActionState, fd: FormData): Promise<ActionStat
     { onConflict: "phone", ignoreDuplicates: true },
   );
   if (error) return { error: dbError(error) };
-  refresh();
+  refreshAll();
   return { ok: true, message: "Number added." };
 }
 
@@ -138,7 +143,7 @@ export async function addEmail(_: ActionState, fd: FormData): Promise<ActionStat
   if (!email || !email.includes("@")) return { error: "Enter an email address." };
   const { error } = await supabase.from("candidate_emails").insert({ candidate_id: text(fd, "candidate_id")!, email });
   if (error) return { error: dbError(error) };
-  refresh();
+  refreshAll();
   return { ok: true, message: "Email added." };
 }
 
@@ -190,7 +195,7 @@ export async function addInterest(_: ActionState, fd: FormData): Promise<ActionS
     null,
   );
   if (err) return { error: err };
-  refresh();
+  refreshAll();
   return { ok: true, message: "Saved." };
 }
 
@@ -201,7 +206,7 @@ export async function addPriorApplication(_: ActionState, fd: FormData): Promise
     { firm: text(fd, "firm") ?? "", route: (text(fd, "route") ?? "other") as Route, date: text(fd, "applied_on") ?? "", details: text(fd, "details") ?? "" },
   ]);
   if (err) return { error: err };
-  refresh();
+  refreshAll();
   return { ok: true, message: "Saved." };
 }
 
@@ -210,7 +215,7 @@ export async function deleteRow(table: "interest_tags" | "prior_applications" | 
   const { error, count } = await supabase.from(table).delete({ count: "exact" }).eq("id", id);
   if (error) return { error: dbError(error) };
   if (!count) return { error: "Only an admin can delete." };
-  refresh();
+  refreshAll();
   return { ok: true };
 }
 
@@ -226,7 +231,7 @@ export async function scheduleCall(_: ActionState, fd: FormData): Promise<Action
     scheduled_for: new Date(`${when}:00+05:30`).toISOString(),
   });
   if (error) return { error: dbError(error) };
-  refresh();
+  refreshAll();
   return { ok: true, message: "Call scheduled." };
 }
 
@@ -234,7 +239,7 @@ export async function cancelCall(id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("screening_calls").update({ status: "cancelled" }).eq("id", id);
   if (error) return { error: dbError(error) };
-  refresh();
+  refreshAll();
   return { ok: true };
 }
 
@@ -246,7 +251,7 @@ export async function addToMandate(_: ActionState, fd: FormData): Promise<Action
     .from("pipeline_entries")
     .insert({ candidate_id: text(fd, "candidate_id")!, mandate_id: mandateId, stage: "mapped" });
   if (error) return { error: dbError(error) };
-  refresh();
+  refreshAll();
   return { ok: true, message: "Added to the mandate." };
 }
 
@@ -301,8 +306,36 @@ export async function saveScreeningCall(_: ActionState, fd: FormData): Promise<A
       .from("pipeline_entries")
       .upsert({ candidate_id: candidateId, mandate_id: mandateId, stage: "called" }, { onConflict: "candidate_id,mandate_id", ignoreDuplicates: true });
   }
-  refresh();
+  refreshAll();
   redirect(`/candidates/${candidateId}`);
+}
+
+export type NotesResult = { ok?: boolean; error?: string; conflict?: boolean; updatedAt?: string | null };
+
+/**
+ * Save the candidate's free-text notes. `seen` is when the notes were last saved as this person
+ * loaded them: if someone else has saved since, nothing is overwritten and they're told so.
+ */
+export async function saveCandidateNotes(candidateId: string, notes: string, seen: string | null): Promise<NotesResult> {
+  const { supabase, userId } = await me();
+  if (!userId) return { error: "You're signed out. Copy your text, sign in again, then paste it back." };
+  const value = notes.replace(/\s+$/, "");
+  const now = new Date().toISOString();
+  let q = supabase
+    .from("candidates")
+    .update({ notes: value || null, notes_updated_at: now, notes_updated_by: userId })
+    .eq("id", candidateId);
+  q = seen ? q.eq("notes_updated_at", seen) : q.is("notes_updated_at", null);
+  const { data, error } = await q.select("notes_updated_at");
+  if (error) return { error: dbError(error) };
+  if (!data?.length) {
+    return {
+      conflict: true,
+      error: "Someone else saved these notes while you were typing. Copy your text, reload the page to see theirs, then add yours.",
+    };
+  }
+  refreshAll();
+  return { ok: true, updatedAt: data[0].notes_updated_at };
 }
 
 export async function registerCv(candidateId: string, storagePath: string, fileName: string, mime: string) {
@@ -312,7 +345,7 @@ export async function registerCv(candidateId: string, storagePath: string, fileN
     .from("candidate_files")
     .insert({ candidate_id: candidateId, storage_path: storagePath, file_name: fileName, mime_type: mime, version: (count ?? 0) + 1 });
   if (error) return { error: dbError(error) };
-  refresh();
+  refreshAll();
   return { ok: true };
 }
 

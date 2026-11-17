@@ -2,13 +2,15 @@ import "server-only";
 
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import type { Practice } from "@/components/practice";
 
 // Lists used by forms and filters, read once per request.
 
-export const getPracticeAreas = cache(async () => {
+/** Practice areas to pick from, in order, each with its group (for <optgroup>s). */
+export const getPracticeAreas = cache(async (): Promise<Practice[]> => {
   const supabase = await createClient();
-  const { data } = await supabase.from("practice_areas").select("name").eq("active", true).order("sort");
-  return (data ?? []).map((p) => p.name);
+  const { data } = await supabase.from("practice_areas").select("name, category").eq("active", true).order("sort");
+  return data ?? [];
 });
 
 export const getTeam = cache(async () => {

@@ -1,6 +1,6 @@
 "use server";
 
-import { refresh } from "next/cache";
+import { refreshAll } from "@/lib/refresh";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { all, dbError, moneyProblem, monthlyToAnnual, num, text, type ActionState } from "@/lib/forms";
@@ -54,7 +54,7 @@ export async function saveMandate(_: ActionState, fd: FormData): Promise<ActionS
     ? await supabase.from("mandates").update(row).eq("id", id).select("id").single()
     : await supabase.from("mandates").insert(row).select("id").single();
   if (res.error || !res.data) return { error: dbError(res.error) };
-  refresh();
+  refreshAll();
   redirect(`/mandates/${res.data.id}`);
 }
 
@@ -62,7 +62,7 @@ export async function setMandateStatus(id: string, status: Status) {
   const { supabase } = await me();
   const { error } = await supabase.from("mandates").update({ status }).eq("id", id);
   if (error) return { error: dbError(error) };
-  refresh();
+  refreshAll();
   return { ok: true };
 }
 
@@ -74,7 +74,7 @@ export async function moveStage(entryId: string, stage: Stage) {
     if (error.message.includes("Log the CV share first")) return { error: "Share the CV first: use “Share CV” on the card. It runs the duplicate check.", needsShare: true };
     return { error: dbError(error) };
   }
-  refresh();
+  refreshAll();
   return { ok: true };
 }
 
@@ -89,7 +89,7 @@ export async function exitEntry(_: ActionState, fd: FormData): Promise<ActionSta
     .update({ exit_reason: reason, exit_note: text(fd, "exit_note"), follow_up_on: followUp })
     .eq("id", text(fd, "entry_id")!);
   if (error) return { error: dbError(error) };
-  refresh();
+  refreshAll();
   return { ok: true };
 }
 
@@ -97,7 +97,7 @@ export async function reopenEntry(entryId: string) {
   const { supabase } = await me();
   const { error } = await supabase.from("pipeline_entries").update({ exit_reason: null, exit_note: null, follow_up_on: null }).eq("id", entryId);
   if (error) return { error: dbError(error) };
-  refresh();
+  refreshAll();
   return { ok: true };
 }
 
@@ -122,7 +122,7 @@ export async function addCandidates(mandateId: string, candidateIds: string[]): 
       .in("candidate_id", candidateIds)
       .is("read_at", null);
   }
-  refresh();
+  refreshAll();
   return { ok: true, added: (data ?? []).map((r) => r.id) };
 }
 
@@ -131,7 +131,7 @@ export async function undoAdds(entryIds: string[]) {
   const { supabase } = await me();
   const { data, error } = await supabase.rpc("undo_pipeline_adds", { p_ids: entryIds });
   if (error) return { error: dbError(error) };
-  refresh();
+  refreshAll();
   return { ok: true, removed: data ?? 0 };
 }
 
@@ -143,7 +143,7 @@ export async function dismissSuggestions(mandateId: string, candidateIds?: strin
   if (candidateIds?.length) q = q.in("candidate_id", candidateIds);
   const { error } = await q;
   if (error) return { error: dbError(error) };
-  refresh();
+  refreshAll();
   return { ok: true };
 }
 
@@ -155,7 +155,7 @@ export async function setInterviewAt(entryId: string, when: string | null) {
     .update({ interview_at: when ? new Date(`${when}:00+05:30`).toISOString() : null })
     .eq("id", entryId);
   if (error) return { error: dbError(error) };
-  refresh();
+  refreshAll();
   return { ok: true };
 }
 
@@ -230,7 +230,7 @@ export async function shareCv(_: ShareState, fd: FormData): Promise<ShareState> 
     }
     return { error: dbError(error) };
   }
-  refresh();
+  refreshAll();
   return { ok: true, shareId: data.id, validUntil: data.valid_until };
 }
 
@@ -264,6 +264,6 @@ export async function recordPlacement(_: ActionState, fd: FormData): Promise<Act
     const order = ["offer", "documents", "doj_fixed", "joined"];
     if (e && order.indexOf(e.stage) < order.indexOf(target)) await supabase.from("pipeline_entries").update({ stage: target }).eq("id", entryId);
   }
-  refresh();
+  refreshAll();
   return { ok: true, message: joined ? "Placement recorded as joined. Raise the invoice from Billing." : "Offer recorded." };
 }

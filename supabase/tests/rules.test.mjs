@@ -110,15 +110,15 @@ const ago = (years) => `(today_ist() - make_interval(years => ${Math.floor(years
 const A = await id(`insert into candidates (full_name, linkedin_url, current_firm_id, practice_areas, practice_start_date, current_city)
   values ('Asha Testcase', 'https://www.linkedin.com/in/asha-testcase-1/', $1, '{"General Corporate"}', ${ago(3)}, 'Mumbai')`, [fOther]);
 const B = await id(`insert into candidates (full_name, current_firm_id, practice_areas, practice_start_date, current_city)
-  values ('Bharat Sample', $1, '{TMT}', ${ago(3.2)}, 'Bengaluru')`, [fOther]);
+  values ('Bharat Sample', $1, '{"Technology Transactions"}', ${ago(3.2)}, 'Bengaluru')`, [fOther]);
 const C = await id(`insert into candidates (full_name, practice_areas, practice_start_date, current_city)
-  values ('Chitra Dummy', '{TMT}', ${ago(3)}, 'Bengaluru')`);
+  values ('Chitra Dummy', '{"Technology Transactions"}', ${ago(3)}, 'Bengaluru')`);
 const D = await id(`insert into candidates (full_name, practice_areas, practice_start_date, current_city)
-  values ('Dev Placeholder', '{TMT}', ${ago(2.5)}, 'Bengaluru')`);
+  values ('Dev Placeholder', '{"Technology Transactions"}', ${ago(2.5)}, 'Bengaluru')`);
 const E = await id(`insert into candidates (full_name, current_firm_id, practice_areas, practice_start_date, current_city)
-  values ('Esha Internal', $1, '{TMT}', ${ago(3)}, 'Bengaluru')`, [fClient]);
+  values ('Esha Internal', $1, '{"Technology Transactions"}', ${ago(3)}, 'Bengaluru')`, [fClient]);
 const F = await id(`insert into candidates (full_name, practice_areas, practice_start_date, current_city)
-  values ('Farhan Senior', '{TMT}', ${ago(9)}, 'Bengaluru')`);
+  values ('Farhan Senior', '{"Technology Transactions"}', ${ago(9)}, 'Bengaluru')`);
 await q(`insert into candidate_phones (candidate_id, phone, source) values ($1, '+919000000001', 'weekday')`, [A]);
 await q(`insert into candidate_emails (candidate_id, email) values ($1, 'asha.test@example.com')`, [A]);
 await q(`insert into interest_tags (candidate_id, firm_id, city, not_taken_reason) values ($1, $2, 'Bengaluru', 'Wanted Example Law, no mandate then')`, [A, fClient]);
@@ -136,7 +136,7 @@ ok(a1.current_city === 'Bengaluru' && a1.notice_period_days === 60, 'a finished 
 console.log('\nRe-engagement on a new mandate');
 await as(R1);
 const M = await id(`insert into mandates (client_id, title, practice_area, pqe_min, pqe_max, city, owner_id)
-  values ($1, 'TMT associate', 'TMT', 2, 4, 'Bengaluru', $2)`, [client, R1]);
+  values ($1, 'TMT associate', 'Technology Transactions', 2, 4, 'Bengaluru', $2)`, [client, R1]);
 const matches = await q(`select * from match_candidates_for_mandate($1)`, [M]);
 const names = matches.map(m => m.full_name);
 console.log('    matches:', matches.map(m => `${m.full_name} (${m.score}: ${m.reasons.join(', ')})`).join(' | '));
@@ -278,11 +278,22 @@ console.log('    payment reminders:', payRow.map(r => r.title).join(' | ') || '(
 console.log('\nMerge');
 const B2 = await id(`insert into candidates (full_name, linkedin_url) values ('Bharat Sample', 'https://linkedin.com/in/bharat-sample')`);
 await q(`insert into candidate_phones (candidate_id, phone) values ($1, '+918000000003')`, [B2]);
+await q(`update candidates set notes = 'Wants Bengaluru only', notes_updated_at = now() - interval '1 day' where id = $1`, [B]);
+await q(`update candidates set notes = 'Spoke in March: open to in-house', notes_updated_at = now() where id = $1`, [B2]);
 await q(`select merge_candidates($1, $2)`, [B, B2]);
-const bm = await one(`select linkedin_slug, (select count(*)::int from candidate_phones where candidate_id = $1) as phones from candidates where id = $1`, [B]);
+const bm = await one(`select linkedin_slug, notes, (select count(*)::int from candidate_phones where candidate_id = $1) as phones from candidates where id = $1`, [B]);
 ok(bm.linkedin_slug === 'bharat-sample' && bm.phones === 1, 'merge keeps one record with both records’ details');
+ok(bm.notes.startsWith('Wants Bengaluru only') && bm.notes.includes('open to in-house'), 'merge keeps both records’ notes, the kept record’s first');
 await as(R2);
 await fails(`select merge_candidates('${A}', '${D}')`, /Only an admin/, 'only an admin can merge');
+
+console.log('\nPractice areas');
+{
+  const pa = await one(`select count(*) filter (where active)::int as live, count(*) filter (where active and category is null)::int as loose,
+                               bool_or(name = 'TMT' and active) as old_live from practice_areas`);
+  ok(pa.live === 99 && pa.loose === 0, `99 practice areas to pick from, every one in a group (${pa.live} live)`);
+  ok(!pa.old_live, 'the older broad areas are hidden');
+}
 
 console.log('\nApp helpers');
 await as(R1);
@@ -354,7 +365,7 @@ await as(R1);
 
 
 console.log('\nUndo a bulk add');
-const Mu = await id(`insert into mandates (client_id, title, practice_area, city) values ($1, 'Undo test role', 'TMT', 'Mumbai')`, [client]);
+const Mu = await id(`insert into mandates (client_id, title, practice_area, city) values ($1, 'Undo test role', 'Technology Transactions', 'Mumbai')`, [client]);
 const u1 = await id(`insert into pipeline_entries (candidate_id, mandate_id) values ($1, $2)`, [C, Mu]);
 const u2 = await id(`insert into pipeline_entries (candidate_id, mandate_id) values ($1, $2)`, [D, Mu]);
 await q(`update pipeline_entries set stage = 'called' where id = $1`, [u2]);
@@ -378,7 +389,7 @@ const stillThere = (await one(`select count(*)::int as n from candidates where i
 ok(stillThere === 1, 'non-admin delete removes nothing');
 // A recruiter (not admin, not superuser) creates a mandate: activity log, stale tracking and
 // re-engagement triggers must all still fire after the EXECUTE revokes in migration 3.
-const Mr = await id(`insert into mandates (client_id, title, practice_area, city, pqe_min, pqe_max) values ($1, 'Recruiter-made TMT role', 'TMT', 'Bengaluru', 2, 5)`, [client]);
+const Mr = await id(`insert into mandates (client_id, title, practice_area, city, pqe_min, pqe_max) values ($1, 'Recruiter-made TMT role', 'Technology Transactions', 'Bengaluru', 2, 5)`, [client]);
 ok((await one(`select count(*)::int as n from activities where mandate_id = $1`, [Mr])).n >= 1, 'recruiter writes still log activity');
 ok((await one(`select count(*)::int as n from notifications where mandate_id = $1`, [Mr])).n >= 0, 'recruiter-created mandate runs re-engagement');
 await fails(`select notify_reengagement('${Mr}')`, /permission denied/, 'internal functions cannot be called over the API');

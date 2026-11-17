@@ -10,6 +10,7 @@ import { getFirmNames, getOpenMandates, getPracticeAreas, getTeam } from "@/lib/
 import { stageLabel } from "@/lib/constants";
 import { ago, formatDate, formatDateTime, formatLakhs, formatPhone, formatPqe } from "@/lib/format";
 import { AddContact, AddInterest, AddPrior, AddToMandate, CallNotes, CancelCall, CvOpen, CvUpload, DeleteButton, ScheduleCall } from "./widgets";
+import { CandidateNotes } from "./notes";
 
 export const metadata: Metadata = { title: "Candidate" };
 
@@ -36,8 +37,9 @@ const outcomeLabel = { fit: "Fit", not_fit: "Not a fit", follow_up: "Follow up" 
 async function Profile({ params }: { params: Params }) {
   const { id } = await params;
   const supabase = await createClient();
-  const [cand, phones, emails, calls, tags, priors, pipes, files, acts, team, teamList, mandates, firms, practices, session] = await Promise.all([
+  const [cand, notes, phones, emails, calls, tags, priors, pipes, files, acts, team, teamList, mandates, firms, practices, session] = await Promise.all([
     supabase.from("v_candidates").select("*").eq("id", id).maybeSingle(),
+    supabase.from("candidates").select("notes, notes_updated_at, notes_updated_by").eq("id", id).maybeSingle(),
     supabase.from("candidate_phones").select("id, phone, source, is_primary").eq("candidate_id", id).order("is_primary", { ascending: false }),
     supabase.from("candidate_emails").select("id, email").eq("candidate_id", id),
     supabase.from("screening_calls").select("*").eq("candidate_id", id).neq("status", "cancelled").order("created_at", { ascending: false }),
@@ -124,6 +126,14 @@ async function Profile({ params }: { params: Params }) {
               </Card>
             ) : null}
 
+            <CandidateNotes
+              candidateId={id}
+              notes={notes.data?.notes ?? null}
+              updatedAt={notes.data?.notes_updated_at ?? null}
+              updatedBy={notes.data?.notes_updated_by ? (team[notes.data.notes_updated_by] ?? null) : null}
+              me={team[me] ?? "Me"}
+            />
+
             <section>
               <h2 className="mb-2.5 text-[16.5px] font-semibold">Mandates</h2>
               {pipes.data?.length ? (
@@ -161,7 +171,7 @@ async function Profile({ params }: { params: Params }) {
               <h2 className="mb-2.5 text-[16.5px] font-semibold">Screening calls</h2>
               {done.length ? (
                 <Card className="divide-y divide-line">
-                  {done.map((s) => (
+                  {done.map((s, i) => (
                     <div key={s.id} className="px-4 py-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span>
@@ -172,6 +182,7 @@ async function Profile({ params }: { params: Params }) {
                       {s.looking_for ? <p className="mt-1 text-[13px]"><span className="text-muted">Looking for:</span> {s.looking_for}</p> : null}
                       {s.action_points ? <p className="text-[13px]"><span className="text-muted">Next:</span> {s.action_points}</p> : null}
                       <CallNotes
+                        open={i === 0}
                         notes={[
                           ["Education", s.education],
                           ["Work history", s.work_history],

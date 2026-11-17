@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { CommandPalette } from "./command-palette";
 import { ContextMenuProvider } from "./context-menu";
+import { FreshOnReturn } from "./fresh-on-return";
 import { LogCallButton } from "./log-call";
 import { NavProgress } from "./nav-progress";
 import { Ripples } from "./motion";
@@ -17,6 +18,7 @@ export function Providers({ children }: { children: ReactNode }) {
         <LogCallButton />
         <Ripples />
         <NavProgress />
+        <FreshOnReturn />
       </ContextMenuProvider>
     </ToastProvider>
   );

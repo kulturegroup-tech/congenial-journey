@@ -1,6 +1,6 @@
 "use server";
 
-import { refresh } from "next/cache";
+import { refreshAll } from "@/lib/refresh";
 import { BRAND_NAME, BRAND_SHORT } from "@/lib/brand";
 import { createClient } from "@/lib/supabase/server";
 import { bool, dbError, num, text, type ActionState } from "@/lib/forms";
@@ -19,7 +19,7 @@ export async function saveMember(_: ActionState, fd: FormData): Promise<ActionSt
     p_is_admin: bool(fd, "is_admin"),
   });
   if (error) return { error: error.message === "Set a PIN for a new member" ? "New members need a PIN (6–12 digits) to sign in." : error.message };
-  refresh();
+  refreshAll();
   return { ok: true, message: pin ? `Saved. ${name} signs in with ${email} and the PIN you set.` : "Saved." };
 }
 
@@ -30,7 +30,7 @@ export async function setMemberActive(id: string, active: boolean) {
   const { error, count } = await supabase.from("team_members").update({ active }, { count: "exact" }).eq("id", id);
   if (error) return { error: dbError(error) };
   if (!count) return { error: "Only an admin can change the team." };
-  refresh();
+  refreshAll();
   return { ok: true };
 }
 
@@ -73,7 +73,7 @@ export async function saveFirmSettings(_: ActionState, fd: FormData): Promise<Ac
   }
   if (error) return { error: dbError(error) };
   if (!count) return { error: "Only an admin can change these." };
-  refresh();
+  refreshAll();
   return { ok: true, message: `Saved.${note}` };
 }
 
@@ -83,6 +83,6 @@ export async function addPracticeArea(_: ActionState, fd: FormData): Promise<Act
   if (!name) return { error: "Enter a name." };
   const { error } = await supabase.from("practice_areas").insert({ name, sort: 500 });
   if (error) return { error: error.code === "23505" ? "That practice area already exists." : dbError(error) };
-  refresh();
+  refreshAll();
   return { ok: true, message: `Added ${name}.` };
 }

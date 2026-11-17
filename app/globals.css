@@ -124,6 +124,11 @@ body {
 .row-link {
   cursor: pointer;
 }
+
+/* On the call form, the floating "Log a call" button would only cover the earlier calls beside it. */
+body:has([data-call-form]) .log-call-fab {
+  display: none;
+}
 tr.row-link > td {
   transition: background-color 0.2s var(--ease-quick);
 }

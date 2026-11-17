@@ -3,6 +3,7 @@
 import { useActionState, useRef, useState } from "react";
 import { Button, Field, FormMessage, Input, Select, SubmitButton, Textarea } from "@/components/form";
 import { Card } from "@/components/ui";
+import { PracticeOptions, type Practice } from "@/components/practice";
 import { CITIES } from "@/lib/constants";
 import { saveScreeningCall } from "../../actions";
 
@@ -32,7 +33,7 @@ export function CallForm({
   mandateId: string;
   mandates: Opt[];
   firms: string[];
-  practices: string[];
+  practices: Practice[];
   known: { current_city: string; notice_period_days: string; current_ctc: string; expected_ctc: string };
 }) {
   const [state, action] = useActionState(saveScreeningCall, null);
@@ -51,6 +52,7 @@ export function CallForm({
       onKeyDown={(e) => {
         if ((e.metaKey || e.ctrlKey) && e.key === "Enter") form.current?.requestSubmit();
       }}
+      data-call-form
       className="max-w-5xl space-y-5"
     >
       <input type="hidden" name="candidate_id" value={candidateId} />
@@ -138,9 +140,7 @@ export function CallForm({
               <Input placeholder="City" list="call-cities" value={t.city} onChange={(e) => setTag(i, "city", e.target.value)} autoComplete="off" />
               <Select value={t.practice} onChange={(e) => setTag(i, "practice", e.target.value)}>
                 <option value="">Any practice</option>
-                {practices.map((p) => (
-                  <option key={p}>{p}</option>
-                ))}
+                <PracticeOptions practices={practices} />
               </Select>
               <Input placeholder="Role, e.g. in-house" value={t.role} onChange={(e) => setTag(i, "role", e.target.value)} />
               <Button size="sm" variant="ghost" onClick={() => setTags(tags.length > 1 ? tags.filter((_, j) => j !== i) : [{ ...emptyTag }])}>

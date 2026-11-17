@@ -370,6 +370,9 @@ export type Database = {
           linkedin_slug: string | null
           linkedin_url: string | null
           needs_review: boolean
+          notes: string | null
+          notes_updated_at: string | null
+          notes_updated_by: string | null
           notice_period_days: number | null
           owner_id: string | null
           pqe_recorded: string | null
@@ -396,6 +399,9 @@ export type Database = {
           linkedin_slug?: string | null
           linkedin_url?: string | null
           needs_review?: boolean
+          notes?: string | null
+          notes_updated_at?: string | null
+          notes_updated_by?: string | null
           notice_period_days?: number | null
           owner_id?: string | null
           pqe_recorded?: string | null
@@ -422,6 +428,9 @@ export type Database = {
           linkedin_slug?: string | null
           linkedin_url?: string | null
           needs_review?: boolean
+          notes?: string | null
+          notes_updated_at?: string | null
+          notes_updated_by?: string | null
           notice_period_days?: number | null
           owner_id?: string | null
           pqe_recorded?: string | null
@@ -1433,18 +1442,21 @@ export type Database = {
         Row: {
           active: boolean
           aliases: string[]
+          category: string | null
           name: string
           sort: number
         }
         Insert: {
           active?: boolean
           aliases?: string[]
+          category?: string | null
           name: string
           sort?: number
         }
         Update: {
           active?: boolean
           aliases?: string[]
+          category?: string | null
           name?: string
           sort?: number
         }

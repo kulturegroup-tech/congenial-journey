@@ -1,6 +1,6 @@
 "use server";
 
-import { refresh } from "next/cache";
+import { refreshAll } from "@/lib/refresh";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { bool, dbError, moneyProblem, monthlyToAnnual, num, text, type ActionState } from "@/lib/forms";
@@ -39,7 +39,7 @@ export async function updatePlacement(_: ActionState, fd: FormData): Promise<Act
     })
     .eq("id", text(fd, "id")!);
   if (error) return { error: dbError(error) };
-  refresh();
+  refreshAll();
   return {
     ok: true,
     message:
@@ -52,7 +52,7 @@ export async function raiseInvoice(placementId: string) {
   const { supabase } = await me();
   const { data, error } = await supabase.rpc("create_invoice", { p_placement: placementId });
   if (error || !data) return { error: error?.message ?? "Couldn't raise the invoice." };
-  refresh();
+  refreshAll();
   redirect(`/billing/invoices/${(data as { id: string }).id}`);
 }
 
@@ -60,7 +60,7 @@ export async function markSent(invoiceId: string) {
   const { supabase, userId } = await me();
   const { error } = await supabase.from("invoices").update({ status: "sent", sent_by: userId, sent_at: new Date().toISOString() }).eq("id", invoiceId).eq("status", "draft");
   if (error) return { error: dbError(error) };
-  refresh();
+  refreshAll();
   return { ok: true };
 }
 
@@ -68,7 +68,7 @@ export async function cancelInvoice(invoiceId: string) {
   const { supabase } = await me();
   const { error } = await supabase.from("invoices").update({ status: "cancelled" }).eq("id", invoiceId);
   if (error) return { error: dbError(error) };
-  refresh();
+  refreshAll();
   return { ok: true };
 }
 
@@ -83,6 +83,6 @@ export async function recordPayment(_: ActionState, fd: FormData): Promise<Actio
     reference: text(fd, "reference"),
   });
   if (error) return { error: dbError(error) };
-  refresh();
+  refreshAll();
   return { ok: true, message: "Payment recorded." };
 }

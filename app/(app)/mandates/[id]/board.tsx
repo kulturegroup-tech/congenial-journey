@@ -6,6 +6,7 @@ import { ArrowRight, CalendarClock, CircleSlash, Send } from "lucide-react";
 import { Button, Dialog, Field, FormMessage, Input, Select, SubmitButton, Textarea } from "@/components/form";
 import { celebrate } from "@/components/confetti";
 import { useContextMenu, type MenuItem } from "@/components/context-menu";
+import { RowLink } from "@/components/row-link";
 import { useToast } from "@/components/toast";
 import { Avatar, Badge } from "@/components/ui";
 import { DATED_STAGES, PHASES, STAGES, stageLabel } from "@/lib/constants";
@@ -262,8 +263,11 @@ function Card({
 }) {
   const canShare = idx(e.stage) < idx("cv_shared");
   const icon = "state grid h-7 w-7 place-items-center rounded-full text-ink/70 hover:text-ink";
+  // The whole tile opens the candidate (components/row-link); drag it to move stages.
   return (
-    <div
+    <RowLink
+      as="div"
+      href={`/candidates/${e.candidate_id}`}
       draggable
       onDragStart={(ev) => {
         ev.dataTransfer.effectAllowed = "move";
@@ -271,12 +275,12 @@ function Card({
       }}
       onDragEnd={onDragEnd}
       onContextMenu={onMenu}
-      className={`state state-ink group mb-1.5 cursor-grab overflow-hidden rounded-2xl bg-white px-3 py-2.5 transition-[opacity,transform,box-shadow] duration-300 hover:shadow-[0_12px_24px_-18px_rgb(29_42_36/0.6)] active:cursor-grabbing ${dragging ? "scale-[0.98] opacity-40" : ""}`}
+      className={`state state-ink group mb-1.5 overflow-hidden rounded-2xl bg-white px-3 py-2.5 transition-[opacity,transform,box-shadow] duration-300 hover:shadow-[0_12px_24px_-18px_rgb(29_42_36/0.6)] active:cursor-grabbing ${dragging ? "scale-[0.98] opacity-40" : ""}`}
     >
       <div className="flex items-center gap-2.5">
         <Avatar name={e.name} size={30} />
         <div className="min-w-0 flex-1">
-          <Link href={`/candidates/${e.candidate_id}`} draggable={false} className="block truncate font-semibold leading-tight hover:text-accent">
+          <Link href={`/candidates/${e.candidate_id}`} draggable={false} className="block truncate font-semibold leading-tight transition-colors group-hover:text-accent">
             {e.name}
           </Link>
           <p className="truncate text-[12px] text-muted">{[e.firm, e.pqe != null ? formatPqe(e.pqe) : null].filter(Boolean).join(" · ") || "No firm recorded"}</p>
@@ -309,7 +313,7 @@ function Card({
         </span>
         <span>{e.owner}</span>
       </div>
-    </div>
+    </RowLink>
   );
 }
 

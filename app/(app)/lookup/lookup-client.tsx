@@ -172,12 +172,14 @@ export function LookupClient() {
             "Email",
             "Last call",
             "On mandates",
+            "",
           ]}
         >
           {current.hits.map((h) => (
             <PersonRow
               as="tr"
               key={h.candidate_id}
+              href={`/candidates/${h.candidate_id}`}
               person={{
                 id: h.candidate_id,
                 name: h.full_name,

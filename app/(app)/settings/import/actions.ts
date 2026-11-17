@@ -1,6 +1,6 @@
 "use server";
 
-import { refresh } from "next/cache";
+import { refreshAll } from "@/lib/refresh";
 import { createClient } from "@/lib/supabase/server";
 
 export type ImportRow = { n: number; data: Record<string, string>; mandate_id: string | null };
@@ -15,7 +15,7 @@ export async function runImport(batch: string, rows: ImportRow[]): Promise<{ res
 }
 
 export async function finishImport() {
-  refresh();
+  refreshAll();
 }
 
 /** Review list: the two records are the same person. Keeps the older one. */
@@ -24,7 +24,7 @@ export async function mergeInto(keep: string, drop: string, importRowId: number)
   const { error } = await supabase.rpc("merge_candidates", { p_keep: keep, p_drop: drop });
   if (error) return { error: error.message };
   await supabase.from("import_rows").update({ status: "merged", candidate_id: keep }).eq("id", importRowId);
-  refresh();
+  refreshAll();
   return { ok: true };
 }
 
@@ -34,6 +34,6 @@ export async function markReviewed(importRowId: number, candidateId: string | nu
   const { error } = await supabase.from("import_rows").update({ status: "imported" }).eq("id", importRowId);
   if (error) return { error: error.message };
   if (candidateId) await supabase.from("candidates").update({ needs_review: false }).eq("id", candidateId);
-  refresh();
+  refreshAll();
   return { ok: true };
 }
