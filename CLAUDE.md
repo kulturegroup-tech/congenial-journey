@@ -9,7 +9,7 @@ The full spec is the "Paradigm Shifters — Recruitment Platform Build Spec" doc
 - The product is **Covaro**. Deployments of this one repo, each redeploying on every push to `main`:
   - **Paradigm Shifters (live, real data):** Render web service (Starter, Singapore, always on), https://paradigm-shifters.onrender.com (its settings are in `render.yaml`) → Supabase project `paradigm-shifters-live` (ref `jrpekdeeyzlbmyghwlta`, Mumbai). Team: Khyati (admin), Kumar, Kopal. The old Vercel copy (`paradigmshifters.vercel.app`, team kulture4) points at the same database and is to be deleted.
   - **Demo (fake data):** Vercel project `covaro-demo` (moving to Netlify) → Supabase project `paradigm-shifters` (ref `fqsqfxshjedljagxytat`), which holds the demo data from `supabase/demo/`. Priyanshi signs in there as admin. Never put real data in it.
-  - Migrations 1–10 are applied on the live project. The demo has 1–8 and 10: migration 9 (keep-awake) is live-only. Apply new migrations to **both**, live first, in order.
+  - Migrations 1–11 are applied on the live project. The demo has all but 9 (keep-awake, live-only, and switched off again by 11). Apply new migrations to **both**, live first, in order.
   - The old Netlify site is no longer used
 - Supabase: Postgres, Auth (Google sign-in + email links), Storage (private buckets), cron + edge functions
 - Tailwind v4. Design tokens live in `app/globals.css`; shared UI in `components/ui.tsx` and `components/form.tsx`, so a design pass touches three files
@@ -143,7 +143,7 @@ Phase 2 (still to do): invoice PDF stored in the `invoices` bucket, reminder ema
 
 - **LinkedIn: no automation of any kind.** No scraping, auto-messaging or browser bots. Khyati's account has been blocked before. Store URLs only.
 - Candidate data is personal data under India's DPDP Act, and client agreements make candidate pay and submissions confidential. Never log personal data to the console or analytics. Never send it to any third-party service except the Claude API in phase 3.
-- Keep-awake: migration 9 schedules `pg_cron` + `pg_net` to open `/warm` (`app/warm/page.tsx`, public in `proxy.ts`) every 5 minutes, Mon–Sat 08:30–21:30 IST, so Vercel's free plan doesn't sleep. It sends nothing and reads nothing. It still pings the old Vercel address; Render doesn't sleep, so it is due to be switched off (`cron.unschedule('keep-app-awake')`) once Priyanshi approves. `/warm` stays as Render's health check.
+- Keep-awake: migration 9 scheduled `pg_cron` + `pg_net` to open `/warm` every 5 minutes so Vercel's free plan didn't sleep; migration 11 switched it off, because Render's Starter plan never sleeps. `/warm` (`app/warm/page.tsx`, public in `proxy.ts`) stays as Render's health check. It reads nothing.
 - The only other outside call is the Mumbai weather check (`lib/weather.ts`, MET Norway, June to mid-October, cached hourly). It sends a city's coordinates and nothing else; keep it that way.
 - RLS stays on for every table. Never use the service role key in the browser.
 - Only admins delete. Prefer status changes and exits over deletes.
