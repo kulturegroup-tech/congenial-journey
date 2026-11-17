@@ -1,0 +1,25 @@
+# Render Blueprint: Paradigm Shifters' live app (Covaro) as an always-on Node server.
+# Singapore is Render's closest region to the Supabase database in Mumbai. Always on, so no cold starts.
+# Set up once in Render: New → Blueprint → this repo. Every push to main redeploys.
+# The two NEXT_PUBLIC values are browser-safe by design (row-level security protects the data).
+services:
+  - type: web
+    name: paradigm-shifters
+    runtime: node
+    region: singapore
+    plan: starter
+    branch: main
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /warm
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        value: https://jrpekdeeyzlbmyghwlta.supabase.co
+      - key: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+        value: sb_publishable_pRRhKX_PsAuFA7iCq7BIWQ_u3i1Uh0H
+      - key: ALLOWED_EMAIL_DOMAINS
+        value: paradigmshifters.in
