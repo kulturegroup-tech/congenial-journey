@@ -171,7 +171,7 @@ export async function shareContext(entryId: string) {
     .single();
   if (!e || !e.mandates) return { error: "Pipeline entry not found." };
   const clientId = e.mandates.client_id;
-  const [cand, files, dup, contacts, agreement] = await Promise.all([
+  const [cand, files, dup, contacts, agreement, settings] = await Promise.all([
     supabase.from("v_candidates").select("full_name, designation, current_firm, pqe_today, current_ctc, expected_ctc, notice_period_days, current_city").eq("id", e.candidate_id).single(),
     supabase.from("candidate_files").select("id, file_name, version, created_at").eq("candidate_id", e.candidate_id).order("version", { ascending: false }),
     supabase.rpc("check_duplicate", { p_candidate: e.candidate_id, p_client: clientId, p_exclude_entry: entryId }),
@@ -183,8 +183,10 @@ export async function shareContext(entryId: string) {
       .order("starts_on", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabase.from("settings").select("firm_name").maybeSingle(),
   ]);
   return {
+    firm: settings.data?.firm_name ?? null,
     candidate: cand.data,
     mandate: { title: e.mandates.title, city: e.mandates.city, client: e.mandates.clients?.display_name ?? "" },
     files: files.data ?? [],

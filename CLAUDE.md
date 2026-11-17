@@ -1,18 +1,21 @@
 # Paradigm Shifters — recruitment platform
 
-Internal web app for Paradigm Shifters, a legal recruitment firm in Navi Mumbai that places lawyers into law firms. It replaces Odoo and their scattered sheets with one system. Three users: Khyati (founder, admin), Kopal and Harshit. All three see everything. Desktop-first.
+Internal web app for Paradigm Shifters, a legal recruitment firm in Navi Mumbai that places lawyers into law firms. It replaces Odoo and their scattered sheets with one system. Three users: Khyati (founder, admin), Kumar and Kopal. All three see everything. Desktop-first.
 
 The full spec is the "Paradigm Shifters — Recruitment Platform Build Spec" doc. This file is what you need while coding.
 
 ## Stack
 
-- Next.js 16 (App Router, TypeScript) on Vercel (project `paradigmshifters`, https://paradigmshifters.vercel.app), deployed from GitHub on every push to `main`. Functions run in Mumbai (`vercel.json`, next to the database). The old Netlify site is no longer used
-- Supabase project `paradigm-shifters` (ref `fqsqfxshjedljagxytat`, Mumbai). Migrations 1–6 are applied live (6: invoice series per financial year, and the invoicing fix). 7 (interview dates, monthly target, undo for suggestion adds), 8 (faster row-level checks, indexes) and 9 (keep-awake ping) are written and tested, approved by Priyanshi on 13 Nov, but not yet applied: Supabase asks her to confirm migrations that contain a `delete`. Apply new ones in order. Until 7 is live the app degrades: the mandate page reads the board without `interview_at`, Settings saves without the target
+- The product is **Covaro**. Two deployments of this one repo, both on Vercel (team kulture4), both redeploy on every push to `main`, functions in Mumbai (`vercel.json`):
+  - **Paradigm Shifters (live, real data):** Vercel project `paradigmshifters`, https://paradigmshifters.vercel.app → Supabase project `paradigm-shifters-live` (ref `jrpekdeeyzlbmyghwlta`, Mumbai). Team: Khyati (admin), Kumar, Kopal. Keep-awake cron runs here.
+  - **Demo (fake data):** Vercel project `covaro-demo` → Supabase project `paradigm-shifters` (ref `fqsqfxshjedljagxytat`), which holds the demo data from `supabase/demo/`. Priyanshi signs in there as admin. Never put real data in it.
+  - Migrations 1–9 are applied on the live project; 1–6 on the demo one. Apply new migrations to **both**, live first, in order.
+  - The old Netlify site is no longer used
 - Supabase: Postgres, Auth (Google sign-in + email links), Storage (private buckets), cron + edge functions
 - Tailwind v4. Design tokens live in `app/globals.css`; shared UI in `components/ui.tsx` and `components/form.tsx`, so a design pass touches three files
 - Claude API for the agents in phase 3 (not before)
 
-Product name: `lib/brand.ts` reads `NEXT_PUBLIC_BRAND_NAME` (badge `NEXT_PUBLIC_BRAND_SHORT`, sign-in line `NEXT_PUBLIC_BRAND_PLACE`, "-" hides it), default currently **Covaro** (demo to another firm, 16 Nov 2026; team shown as Ankit (admin), Shobhit, Manglam). Switch back to Paradigm Shifters, and `settings.firm_name`, when Khyati's team uses it again. Never hard-code the name; use `BRAND_NAME`. The same repo can run as a second Vercel project with its own Supabase project and name (a demo for another firm).
+Product name: `lib/brand.ts` reads `NEXT_PUBLIC_BRAND_NAME` (badge `NEXT_PUBLIC_BRAND_SHORT`, sign-in line `NEXT_PUBLIC_BRAND_PLACE`, "-" hides it), default Covaro. The firm's own name (invoices, the signature on CV share notes) is `settings.firm_name`. Never hard-code either; use `BRAND_NAME`.
 
 Env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (browser-safe), `ALLOWED_EMAIL_DOMAINS`, `ALLOWED_EMAILS`. `SUPABASE_SERVICE_ROLE_KEY` is for import scripts only, never client code. See `.env.example`.
 

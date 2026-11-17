@@ -117,7 +117,8 @@ function ShareForm({ entryId, ctx, onClose, onShared }: { entryId: string; ctx: 
       "CV attached. Happy to set up a call.",
       "",
       "Regards,",
-      BRAND_NAME,
+      // The recruitment firm signs the note, not the product.
+      ctx.firm ?? BRAND_NAME,
     ]
       .filter((l, i, a) => !(l === "" && a[i - 1] === ""))
       .join("\n");
