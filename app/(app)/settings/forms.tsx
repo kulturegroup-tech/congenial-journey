@@ -1,9 +1,11 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
+import { useToast } from "@/components/toast";
+import { createClient } from "@/lib/supabase/client";
 import { Button, Dialog, Field, FormMessage, Input, SubmitButton, Textarea } from "@/components/form";
 import type { ActionState } from "@/lib/forms";
-import { addPracticeArea, changeMyPin, saveFirmSettings, saveMember, setCvReading, setMemberActive } from "./actions";
+import { addPracticeArea, changeMyPin, saveFirmSettings, saveMember, setCvReading, setLogo, setMemberActive } from "./actions";
 
 export function MemberDialog({ member }: { member?: { full_name: string; email: string; is_admin: boolean } }) {
   return (
@@ -187,5 +189,108 @@ export function CvReadingSwitch({ on, canEdit }: { on: boolean; canEdit: boolean
       </Button>
       {err ? <span className="text-[12px] text-danger">{err}</span> : null}
     </span>
+  );
+}
+
+/** The firm's logo for CV cover pages. Uploaded straight to private storage; only admins change it. */
+export function LogoForm({ path, canEdit }: { path: string | null; canEdit: boolean }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const input = useRef<HTMLInputElement>(null);
+  const toast = useToast();
+
+  useEffect(() => {
+    if (!path) return;
+    let objectUrl: string | null = null;
+    let live = true;
+    createClient()
+      .storage.from("branding")
+      .download(path)
+      .then(({ data }) => {
+        if (!live || !data) return;
+        objectUrl = URL.createObjectURL(data);
+        setUrl(objectUrl);
+      });
+    return () => {
+      live = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [path]);
+
+  async function upload(file: File) {
+    setErr(null);
+    if (!/^image\/(png|jpeg)$/.test(file.type)) return setErr("Use a PNG or JPG file.");
+    if (file.size > 2 * 1024 * 1024) return setErr("Use a file under 2 MB.");
+    setBusy(true);
+    const storage = createClient().storage.from("branding");
+    const next = `logo-${crypto.randomUUID()}.${file.type === "image/png" ? "png" : "jpg"}`;
+    const { error } = await storage.upload(next, file, { contentType: file.type });
+    if (error) {
+      setBusy(false);
+      return setErr("Upload failed. Check the internet and try again.");
+    }
+    const r = await setLogo(next);
+    setBusy(false);
+    if (r.error) return setErr(r.error);
+    if (path) await storage.remove([path]); // the old one; harmless if it fails
+    toast({ message: "Logo updated. New cover pages use it." });
+  }
+
+  async function remove() {
+    if (!path) return;
+    setBusy(true);
+    const r = await setLogo(null);
+    setBusy(false);
+    if (r.error) return setErr(r.error);
+    setUrl(null);
+    toast({
+      message: "Logo removed. Cover pages show the firm name instead.",
+      action: { label: "Undo", onClick: async () => void (await setLogo(path)) },
+    });
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-5">
+      <div className="flex h-20 w-64 items-center justify-center rounded-2xl bg-canvas p-3">
+        {path && url ? (
+          // eslint-disable-next-line @next/next/no-img-element -- a private file shown from a blob URL
+          <img src={url} alt="Firm logo" className="max-h-full max-w-full object-contain" />
+        ) : (
+          <span className="text-[13px] text-faint">{path ? "Loading…" : "No logo yet"}</span>
+        )}
+      </div>
+      <div className="space-y-2 text-[13px]">
+        <p className="max-w-md text-muted">
+          Goes at the top of the cover page put in front of a shared CV. PNG or JPG under 2 MB; a wide version on a white or clear background looks best.
+        </p>
+        {canEdit ? (
+          <div className="flex items-center gap-2">
+            <input
+              ref={input}
+              type="file"
+              accept="image/png,image/jpeg"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) upload(f);
+              }}
+            />
+            <Button size="sm" variant="primary" disabled={busy} onClick={() => input.current?.click()}>
+              {busy ? "Saving…" : path ? "Replace logo" : "Upload logo"}
+            </Button>
+            {path ? (
+              <Button size="sm" variant="ghost" disabled={busy} onClick={remove}>
+                Remove
+              </Button>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-[12px] text-muted">An admin can change it.</p>
+        )}
+        {err ? <p className="text-[12px] text-danger">{err}</p> : null}
+      </div>
+    </div>
   );
 }

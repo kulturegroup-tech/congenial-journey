@@ -5,7 +5,7 @@ import { Badge, Card, Page, PageHeader, Table, TableSkeleton } from "@/component
 import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/member";
 import { cvReaderKeySet } from "@/lib/ai/cv-reader";
-import { ActiveToggle, CvReadingSwitch, FirmForm, MemberDialog, PinForm, PracticeAreaForm } from "./forms";
+import { ActiveToggle, CvReadingSwitch, FirmForm, LogoForm, MemberDialog, PinForm, PracticeAreaForm } from "./forms";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -76,6 +76,13 @@ async function SettingsBody() {
       <section>
         <h2 className="mb-2.5 text-[16.5px] font-semibold">Firm details and defaults</h2>
         <Card className="p-5">{settings.data ? <FirmForm s={settings.data} canEdit={isAdmin} /> : <p className="text-muted">Couldn&apos;t load settings.</p>}</Card>
+      </section>
+
+      <section id="logo" className="scroll-mt-24">
+        <h2 className="mb-2.5 text-[16.5px] font-semibold">Logo</h2>
+        <Card className="p-5">
+          <LogoForm path={settings.data?.logo_path ?? null} canEdit={isAdmin} />
+        </Card>
       </section>
 
       <section id="cv-reader" className="scroll-mt-24">

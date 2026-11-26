@@ -9,6 +9,18 @@ import { CONTACT_ROLE } from "@/lib/constants";
 import { cvLink } from "../../candidates/actions";
 import { openFile } from "@/lib/open-file";
 import { shareContext, shareCv, type Finding, type ShareState } from "../actions";
+import { coverNote, isPdfFile, makeCoverFile, saveBlob } from "./cover";
+
+// The cover tick is remembered per browser (firms that always use it needn't tick it each time).
+// The CTC tick always starts off.
+const COVER_KEY = "covaro.share.cover";
+const rememberedCover = () => {
+  try {
+    return localStorage.getItem(COVER_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
 
 type Ctx = Awaited<ReturnType<typeof shareContext>>;
 type Loaded = Exclude<Ctx, { error: string }>;
@@ -104,6 +116,33 @@ function ShareForm({ entryId, ctx, onClose, onShared }: { entryId: string; ctx: 
   const overrideReason = [reason, reasonNote.trim()].filter(Boolean).join(": ");
   const [fileErr, setFileErr] = useState<string | null>(null);
   const [channels, setChannels] = useState<string[]>(["email", ...(ctx.agreement?.requires_portal ? ["portal"] : [])]);
+  const [cover, setCover] = useState(rememberedCover);
+  const [withMoney, setWithMoney] = useState(false);
+  const [coverBusy, setCoverBusy] = useState(false);
+  const [coverMsg, setCoverMsg] = useState<string | null>(null);
+  const file = ctx.files.find((f) => f.id === fileId);
+  const pickCover = (on: boolean) => {
+    setCover(on);
+    try {
+      localStorage.setItem(COVER_KEY, on ? "1" : "0");
+    } catch {
+      // Private mode: just don't remember.
+    }
+  };
+  const previewCover = () =>
+    openFile(async () => {
+      const r = await makeCoverFile(ctx, fileId, withMoney);
+      return "error" in r ? { error: r.error } : { url: URL.createObjectURL(r.blob) };
+    }).then(setCoverMsg);
+  const downloadCover = async () => {
+    setCoverBusy(true);
+    setCoverMsg(null);
+    const r = await makeCoverFile(ctx, fileId, withMoney);
+    setCoverBusy(false);
+    if ("error" in r) return setCoverMsg(r.error);
+    saveBlob(r.blob, r.fileName);
+    if (!r.joined && r.reason && r.reason !== "no_cv") setCoverMsg(coverNote[r.reason]);
+  };
 
   const firstName = to?.name.split(" ")[0] ?? "";
   const [note, setNote] = useState(() => {
@@ -149,7 +188,9 @@ function ShareForm({ entryId, ctx, onClose, onShared }: { entryId: string; ctx: 
         <p className="rounded-2xl bg-ok-soft px-4 py-2.5 text-ok">
           Share logged. This CV stays ours at {ctx.mandate.client} until <b>{formatDate(state.validUntil!)}</b>.
         </p>
-        <p className="text-[13px] text-muted">Now send it. Attach the CV to the email or WhatsApp yourself; the note is filled in.</p>
+        <p className="text-[13px] text-muted">
+          Now send it. Attach the {cover && isPdfFile(file) ? "PDF (cover and CV)" : cover ? "cover and the CV" : "CV"} to the email or WhatsApp yourself; the note is filled in.
+        </p>
         <div className="flex flex-wrap gap-2">
           {channels.includes("email") ? (
             <a href={mailto} className="state inline-flex h-10 items-center rounded-full bg-accent px-4 font-medium text-white">
@@ -161,11 +202,14 @@ function ShareForm({ entryId, ctx, onClose, onShared }: { entryId: string; ctx: 
               Open WhatsApp
             </a>
           ) : null}
+          {cover ? (
+            <Button onClick={downloadCover} disabled={coverBusy}>
+              {coverBusy ? "Making the PDF…" : isPdfFile(file) ? "Download CV with cover" : "Download cover"}
+            </Button>
+          ) : null}
           {fileId ? (
-            <Button
-              onClick={async () => setFileErr(await openFile(() => cvLink(fileId)))}
-            >
-              Download CV
+            <Button variant={cover ? "ghost" : "outline"} onClick={async () => setFileErr(await openFile(() => cvLink(fileId)))}>
+              {cover && isPdfFile(file) ? "CV only" : "Download CV"}
             </Button>
           ) : null}
           <Button variant="ghost" onClick={onClose}>
@@ -173,6 +217,7 @@ function ShareForm({ entryId, ctx, onClose, onShared }: { entryId: string; ctx: 
           </Button>
         </div>
         {fileErr ? <p className="text-[13px] text-danger">{fileErr}</p> : null}
+        {coverMsg ? <p className="text-[13px] text-warn">{coverMsg}</p> : null}
       </div>
     );
   }
@@ -241,6 +286,39 @@ function ShareForm({ entryId, ctx, onClose, onShared }: { entryId: string; ctx: 
         <Field label="CC" hint={ctx.agreement?.copy_ta_on_partner_shares ? "The agreement asks us to copy the TA team." : undefined}>
           <Input value={ccText} onChange={(e) => setCcText(e.target.value)} placeholder="ta@firm.com" />
         </Field>
+      </div>
+
+      <div className="rounded-2xl bg-side/70 px-4 py-3 text-[13px]">
+        <label className="flex items-center gap-2 font-medium">
+          <input type="checkbox" checked={cover} onChange={(e) => pickCover(e.target.checked)} />
+          Add our cover page
+        </label>
+        {cover ? (
+          <div className="ml-6 mt-1.5 space-y-1.5">
+            <p className="text-muted">
+              One page in front of the CV with {ctx.logoPath ? "your logo" : "your firm's name"}, their experience, practice areas and highlights. No phone or
+              email; those stay on the CV.
+            </p>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={withMoney} onChange={(e) => setWithMoney(e.target.checked)} />
+              Show CTC and notice period on it
+            </label>
+            <button type="button" onClick={previewCover} className="font-medium text-accent underline underline-offset-2">
+              Preview the cover
+            </button>
+            {!ctx.logoPath ? (
+              <p className="text-[12px] text-muted">
+                No logo yet: an admin can add it in{" "}
+                <Link href="/settings#logo" className="underline">
+                  Settings
+                </Link>
+                .
+              </p>
+            ) : null}
+            {!ctx.highlights ? <p className="text-[12px] text-warn">No highlights for them yet. Add a few on their profile (Edit) so the cover says what stands out.</p> : null}
+            {coverMsg ? <p className="text-[12px] text-danger">{coverMsg}</p> : null}
+          </div>
+        ) : null}
       </div>
 
       <Field label="Note">

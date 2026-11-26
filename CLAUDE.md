@@ -9,7 +9,7 @@ The full spec is the "Paradigm Shifters — Recruitment Platform Build Spec" doc
 - The product is **Covaro**. Deployments of this one repo, each redeploying on every push to `main`:
   - **Paradigm Shifters (live, real data):** Render web service (Starter, Singapore, always on), https://paradigm-shifters.onrender.com (its settings are in `render.yaml`) → Supabase project `paradigm-shifters-live` (ref `jrpekdeeyzlbmyghwlta`, Mumbai). Team: Khyati (admin), Kumar, Kopal. The old Vercel copy (`paradigmshifters.vercel.app`, team kulture4) points at the same database and is to be deleted.
   - **Ankit Mahajan's trial (Magic Circle Partners, real data):** Vercel project `covaro-demo`, https://covaro-app.vercel.app → Supabase project `paradigm-shifters` (ref `fqsqfxshjedljagxytat`). It was the demo; since 26 Nov 2026 it holds Ankit's own candidates (he is admin), so never demo it to anyone else, never reset it, and treat it like live data. A new demo needs a new project.
-  - Migrations 1–14 are applied on the live project. The demo has all but 9 (keep-awake, live-only, and switched off again by 11). Apply new migrations to **both**, live first, in order, **before** pushing code that needs them: every push redeploys every copy.
+  - Migrations 1–15 are applied on the live project. The demo has all but 9 (keep-awake, live-only, and switched off again by 11). Apply new migrations to **both**, live first, in order, **before** pushing code that needs them: every push redeploys every copy.
   - A new firm gets its own Supabase project and Render service: `docs/new-firm-setup.md`. Add each one to this list.
   - Demo data: `npm run -s demo:reset-sql` loads `supabase/demo/` into a demo project (paste into its SQL editor); it refuses to run where there's no demo data. Not for Ankit's trial.
   - The old Netlify site is no longer used
@@ -105,6 +105,7 @@ Supabase runs API calls with safeupdate on: an `UPDATE` or `DELETE` without `WHE
 - Files: private buckets only (`candidate-files`, `agreements`, `invoices`), opened through signed URLs.
 - CV reader: Candidates → CV inbox (`app/(app)/candidates/inbox`). The browser uploads to `candidate-files/inbox/<uuid>.<ext>` and adds a `cv_inbox` row; `POST /api/cv-inbox/read` (a route, so three can run at once) sends the PDF, or the text of a `.docx` (`mammoth`), to Claude with a forced tool call, and `tidyExtract` in `lib/cv-extract.ts` throws out anything off the list. The team checks it on `/candidates/new?inbox=<id>` (the CV beside the form, likely duplicates with "Add this CV to them"); saving files the CV via `fileInboxCv`. The file keeps its inbox path. Off until an admin turns on `settings.ai_cv_reading`; `CV_READER_FAKE=1` pretends locally. Never record date of birth, age, gender, religion, caste, marital status, family or health from a CV (the prompt says so; keep it).
 - Highlights: `candidates.highlights`, 3 or 4 lines (one per line) from the CV reader or typed, shown on the profile and edited on the candidate form.
+- Cover page: "Add our cover page" in Share CV (remembered per browser; "Show CTC and notice period" always starts off). `lib/cover-pdf.ts` (pdf-lib, no app imports, tests in `tests/cover.test.mjs`) draws one page from the firm's logo, the candidate's role, PQE, city, practice areas and highlights, and puts it in front of the CV's own pages; Word or locked CVs get the cover on its own. Built in the browser (`app/(app)/mandates/[id]/cover.ts`), so the CV never leaves the computer. No phone or email on it, and nothing names Covaro: it's the firm's document. The logo is uploaded by an admin in Settings to the private `branding` bucket (`settings.logo_path`); never hard-code one. The serif is `public/fonts/InstrumentSerif-Regular.ttf` (OFL; pdf-lib can't embed the app's woff2).
 
 ## Phase 1 scope (weeks 1–3): replace the sheets
 
@@ -125,7 +126,7 @@ Build in this order. Each step should be usable on its own.
 
 Built ahead of phase 2: placements (from "Offer accepted" on a pipeline card, status updates on Billing), invoices via `create_invoice` with a printable tax invoice (browser print to PDF), payments, team management with PINs in Settings.
 
-Ankit's list (26 Nov 2026), in order: (1) client contacts on mandates + Excel import, done; (2) CV reader, single and bulk, editable details, AI highlights, done; (3) a one-page branded cover (firm logo, summary, highlights) put before the original CV when sharing, behind a tick box; (4) a client portal: link plus one-time code per contact, the CVs shared with that client, feedback, Excel export.
+Ankit's list (26 Nov 2026), in order: (1) client contacts on mandates + Excel import, done; (2) CV reader, single and bulk, editable details, AI highlights, done; (3) a one-page branded cover put before the original CV when sharing, behind a tick box, done; (4) a client portal: link plus one-time code per contact, the CVs shared with that client, feedback, Excel export.
 
 Phase 2 (still to do): invoice PDF stored in the `invoices` bucket, reminder emails, Google Calendar sync, dashboard. Phase 3: AI agents.
 

@@ -166,7 +166,7 @@ export type Finding = { rule: string; blocking: boolean; detail: string; seen_on
 
 /** Everything the share dialog needs, read when it opens. */
 export async function shareContext(entryId: string) {
-  const { supabase } = await me();
+  const { supabase, userId } = await me();
   const { data: e } = await supabase
     .from("pipeline_entries")
     .select("id, candidate_id, mandate_id, mandates(title, city, client_id, contact_ids, clients(display_name))")
@@ -174,9 +174,13 @@ export async function shareContext(entryId: string) {
     .single();
   if (!e || !e.mandates) return { error: "Pipeline entry not found." };
   const clientId = e.mandates.client_id;
-  const [cand, files, dup, contacts, agreement, settings] = await Promise.all([
-    supabase.from("v_candidates").select("full_name, designation, current_firm, pqe_today, current_ctc, expected_ctc, notice_period_days, current_city").eq("id", e.candidate_id).single(),
-    supabase.from("candidate_files").select("id, file_name, version, created_at").eq("candidate_id", e.candidate_id).order("version", { ascending: false }),
+  const [cand, files, dup, contacts, agreement, settings, extra, sharer] = await Promise.all([
+    supabase
+      .from("v_candidates")
+      .select("full_name, designation, current_firm, pqe_today, current_ctc, expected_ctc, notice_period_days, current_city, practice_areas")
+      .eq("id", e.candidate_id)
+      .single(),
+    supabase.from("candidate_files").select("id, file_name, mime_type, storage_path, version, created_at").eq("candidate_id", e.candidate_id).order("version", { ascending: false }),
     supabase.rpc("check_duplicate", { p_candidate: e.candidate_id, p_client: clientId, p_exclude_entry: entryId }),
     supabase.from("client_contacts").select("id, name, role, email, phone, copy_on_shares").eq("client_id", clientId).order("name"),
     supabase
@@ -186,10 +190,16 @@ export async function shareContext(entryId: string) {
       .order("starts_on", { ascending: false })
       .limit(1)
       .maybeSingle(),
-    supabase.from("settings").select("firm_name").maybeSingle(),
+    supabase.from("settings").select("firm_name, logo_path").eq("id", true).maybeSingle(),
+    // For the cover page: the candidate's highlights, and who is sharing.
+    supabase.from("candidates").select("highlights").eq("id", e.candidate_id).maybeSingle(),
+    userId ? supabase.from("team_members").select("full_name").eq("id", userId).maybeSingle() : null,
   ]);
   return {
     firm: settings.data?.firm_name ?? null,
+    logoPath: settings.data?.logo_path ?? null,
+    highlights: extra.data?.highlights ?? null,
+    sharer: sharer?.data?.full_name ?? null,
     candidate: cand.data,
     mandate: { title: e.mandates.title, city: e.mandates.city, client: e.mandates.clients?.display_name ?? "" },
     files: files.data ?? [],

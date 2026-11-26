@@ -100,3 +100,14 @@ export async function setCvReading(on: boolean) {
   refreshAll();
   return { ok: true };
 }
+
+/** Admin sets (or clears) the firm's logo: a file already uploaded to the private branding bucket. */
+export async function setLogo(path: string | null) {
+  if (path && !/^logo-[0-9a-f-]{36}\.(png|jpg)$/.test(path)) return { error: "That isn't a logo file." };
+  const supabase = await createClient();
+  const { error, count } = await supabase.from("settings").update({ logo_path: path, updated_at: new Date().toISOString() }, { count: "exact" }).eq("id", true);
+  if (error) return { error: dbError(error) };
+  if (!count) return { error: "Only an admin can change the logo." };
+  refreshAll();
+  return { ok: true };
+}

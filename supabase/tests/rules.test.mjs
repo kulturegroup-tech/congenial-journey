@@ -38,6 +38,9 @@ await db.exec(`
   create table storage.buckets (id text primary key, name text, public boolean);
   create table storage.objects (id uuid default gen_random_uuid(), bucket_id text, name text);
   alter table storage.objects enable row level security;
+  grant usage on schema storage to authenticated;
+  grant select on storage.buckets to authenticated;
+  grant select, insert, update, delete on storage.objects to authenticated;
   -- Like Supabase: new tables and functions in public are granted to the API roles as they are created,
   -- so a later REVOKE in a migration sticks.
   grant usage on schema public, auth to anon, authenticated;
@@ -441,7 +444,19 @@ await q(`delete from cv_inbox where id = $1`, [cvIn]);
 ok((await one(`select count(*)::int as n from cv_inbox where id = $1`, [cvIn])).n === 1, 'only an admin removes an inbox row');
 await q(`update candidates set highlights = 'Leads fund formation work' where id = $1`, [F]);
 ok((await one(`select highlights from candidates where id = $1`, [F])).highlights === 'Leads fund formation work', 'a candidate keeps editable CV highlights');
+// The firm's logo for CV cover pages: private, read by the team, changed only by an admin.
+ok((await one(`select logo_path from settings`)).logo_path === null, 'no logo until an admin uploads one');
+ok((await one(`select public from storage.buckets where id = 'branding'`)).public === false, 'logos sit in a private bucket');
+await fails(`insert into storage.objects (bucket_id, name) values ('branding', 'logo-r2.png')`, /row-level security/, 'only an admin uploads the logo');
+await as(R1);
+await q(`insert into storage.objects (bucket_id, name) values ('branding', 'logo-r1.png')`);
+await q(`update settings set logo_path = 'logo-r1.png' where id`);
+await as(R2);
+ok((await one(`select count(*)::int as n from storage.objects where bucket_id = 'branding'`)).n === 1, 'the whole team can read the logo for their covers');
+await q(`update settings set logo_path = null where id`);
+ok((await one(`select logo_path from settings`)).logo_path === 'logo-r1.png', 'only an admin changes which file is the logo');
 await as(OUT);
+ok((await one(`select count(*)::int as n from storage.objects where bucket_id = 'branding'`)).n === 0, 'an outsider sees no logo');
 ok((await one(`select count(*)::int as n from cv_inbox`)).n === 0, 'an outsider sees no inbox CVs');
 ok((await one(`select count(*)::int as n from candidates`)).n === 0, 'signed-in outsider sees nothing');
 ok((await one(`select count(*)::int as n from settings`)).n === 0, 'outsider cannot read settings');

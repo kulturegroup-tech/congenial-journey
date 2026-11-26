@@ -1719,6 +1719,7 @@ export type Database = {
       }
       settings: {
         Row: {
+          logo_path: string | null
           ai_cv_reading: boolean
           address: string | null
           bank_details: string | null
@@ -1738,6 +1739,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          logo_path?: string | null
           ai_cv_reading?: boolean
           address?: string | null
           bank_details?: string | null
@@ -1757,6 +1759,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          logo_path?: string | null
           ai_cv_reading?: boolean
           address?: string | null
           bank_details?: string | null
