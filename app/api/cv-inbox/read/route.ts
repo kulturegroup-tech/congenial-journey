@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   ]);
   if (!row) return NextResponse.json({ error: "That CV isn't in the inbox." }, { status: 404 });
   if (!settings?.ai_cv_reading) return NextResponse.json({ error: "Reading CVs with AI is switched off. An admin can turn it on in Settings." }, { status: 409 });
-  if (!cvReaderKeySet()) return NextResponse.json({ error: "The Claude API key isn't set on the server yet." }, { status: 503 });
+  if (!cvReaderKeySet()) return NextResponse.json({ error: "CV reading isn't set up on the server yet." }, { status: 503 });
   if (row.status === "saved" || row.status === "discarded") return NextResponse.json({ error: "This CV has already been dealt with." }, { status: 409 });
   if (row.status === "reading" && Date.now() - new Date(row.updated_at).getTime() < STUCK_MS)
     return NextResponse.json({ error: "Already reading this one." }, { status: 409 });

@@ -30,13 +30,13 @@ async function wordText(bytes: ArrayBuffer): Promise<string> {
 }
 
 function apiError(status: number, body: string): string {
-  if (status === 401 || status === 403) return "The Claude API key was refused. Check ANTHROPIC_API_KEY on the server.";
-  if (status === 429) return "Too many CVs at once for the Claude account's limit. Try again in a minute.";
-  if (status === 529 || status === 503) return "Claude is busy right now. Try again in a minute.";
-  if (status === 400 && /credit|balance|billing/i.test(body)) return "The Claude account is out of credit. Add credit in the Claude Console.";
-  if (status === 400 && /pdf|document/i.test(body)) return "Claude couldn't open this PDF. If it has a password, save a copy without one.";
+  if (status === 401 || status === 403) return "CV reading isn't set up correctly on the server. Let Priyanshi know.";
+  if (status === 429) return "Too many CVs at once. Try again in a minute.";
+  if (status === 529 || status === 503) return "The AI is busy right now. Try again in a minute.";
+  if (status === 400 && /credit|balance|billing/i.test(body)) return "CV reading is paused on the server. Let Priyanshi know.";
+  if (status === 400 && /pdf|document/i.test(body)) return "Couldn't open this PDF. If it has a password, save a copy without one.";
   if (status === 400 && /too long|too large|exceed/i.test(body)) return "This file is too long to read. Upload a shorter CV.";
-  return `Claude couldn't read this CV (error ${status}). Try again, or fill the details in by hand.`;
+  return `Couldn't read this CV (error ${status}). Try again, or fill the details in by hand.`;
 }
 
 export async function readCv(
@@ -66,7 +66,7 @@ export async function readCv(
 
   if (cvReaderFake()) return { extract: fakeExtract(file.fileName, practices) };
   const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) return { error: "The Claude API key isn't set on the server yet." };
+  if (!key) return { error: "CV reading isn't set up on the server yet." };
 
   let res: Response;
   try {
@@ -85,7 +85,7 @@ export async function readCv(
     });
   } catch (e) {
     const timedOut = e instanceof Error && e.name === "TimeoutError";
-    return { error: timedOut ? "Claude took too long on this CV. Try again." : "Couldn't reach Claude. Check the internet and try again." };
+    return { error: timedOut ? "Reading this CV took too long. Try again." : "Couldn't reach the AI. Check the internet and try again." };
   }
 
   if (!res.ok) {
@@ -95,7 +95,7 @@ export async function readCv(
   }
   const data = (await res.json().catch(() => null)) as { content?: { type: string; name?: string; input?: unknown }[] } | null;
   const call = data?.content?.find((b) => b.type === "tool_use" && b.name === CV_TOOL_NAME);
-  if (!call) return { error: "Claude didn't return the details. Try again." };
+  if (!call) return { error: "The AI didn't return the details. Try again." };
   const extract = tidyExtract(call.input, practices);
   if (!extract.full_name && !extract.emails.length && !extract.phones.length) return { error: "This doesn't look like a CV: no name or contact details found." };
   return { extract };

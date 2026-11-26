@@ -67,12 +67,12 @@ async function InboxBody() {
           action={isAdmin ? <ButtonLink href="/settings#cv-reader" variant="primary">Turn it on in Settings</ButtonLink> : null}
         >
           {isAdmin
-            ? "Each CV is sent to Anthropic's Claude API to be read. Turn it on once you're happy with that."
+            ? "Switch it on and every CV you drop in is read for you: name, contact details, firm, PQE, practice areas and highlights, ready for your team to check."
             : "An admin can turn it on in Settings. Until then, add candidates by hand."}
         </Empty>
       ) : !keySet ? (
         <Card className="bg-warn-soft p-5 text-[14px] text-warn">
-          Switched on, but the Claude API key isn&apos;t set on the server yet, so CVs can&apos;t be read. Priyanshi adds it; nothing else is needed from you.
+          Switched on, but CV reading isn&apos;t set up on the server yet, so CVs can&apos;t be read. Priyanshi sets it up; nothing else is needed from you.
         </Card>
       ) : (
         <InboxUploader />
@@ -179,7 +179,7 @@ async function InboxBody() {
 
       {on ? (
         <p className="max-w-2xl text-[12px] text-muted">
-          Each CV is sent to Anthropic&apos;s Claude API to be read; the file itself stays in your private storage. Check every detail against the CV before adding: AI can misread.
+          AI can misread, so check every detail against the CV before adding. The file itself stays in your private storage.
         </p>
       ) : null}
     </div>
