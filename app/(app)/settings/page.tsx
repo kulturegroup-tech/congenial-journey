@@ -84,10 +84,10 @@ async function SettingsBody() {
           <div className="max-w-xl space-y-1.5 text-[13.5px]">
             <p>
               {settings.data?.ai_cv_reading ? <Badge tone="ok">On</Badge> : <Badge>Off</Badge>}{" "}
-              {cvReaderKeySet() ? <span className="text-muted">Claude API key is set.</span> : <span className="text-warn">The Claude API key isn&apos;t set on the server yet.</span>}
+              {cvReaderKeySet() ? <span className="text-muted">Set up on the server.</span> : <span className="text-warn">Not set up on the server yet.</span>}
             </p>
             <p className="text-muted">
-              When on, CVs dropped into the CV inbox are sent to Anthropic&apos;s Claude API, which reads out the name, contact details, firm, PQE,
+              When on, CVs dropped into the CV inbox are sent to an outside AI service, which reads out the name, contact details, firm, PQE,
               practice areas and a few highlights for the team to check. While off, nothing is sent.
             </p>
           </div>
