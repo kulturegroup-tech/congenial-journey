@@ -8,14 +8,14 @@ The full spec is the "Paradigm Shifters — Recruitment Platform Build Spec" doc
 
 - The product is **Covaro**. Deployments of this one repo, each redeploying on every push to `main`:
   - **Paradigm Shifters (live, real data):** Render web service (Starter, Singapore, always on), https://paradigm-shifters.onrender.com (its settings are in `render.yaml`) → Supabase project `paradigm-shifters-live` (ref `jrpekdeeyzlbmyghwlta`, Mumbai). Team: Khyati (admin), Kumar, Kopal. The old Vercel copy (`paradigmshifters.vercel.app`, team kulture4) points at the same database and is to be deleted.
-  - **Demo (fake data):** Vercel project `covaro-demo` (moving to Netlify) → Supabase project `paradigm-shifters` (ref `fqsqfxshjedljagxytat`), which holds the demo data from `supabase/demo/`. Priyanshi signs in there as admin. Never put real data in it.
-  - Migrations 1–13 are applied on the live project. The demo has all but 9 (keep-awake, live-only, and switched off again by 11). Apply new migrations to **both**, live first, in order, **before** pushing code that needs them: every push redeploys every copy.
+  - **Ankit Mahajan's trial (Magic Circle Partners, real data):** Vercel project `covaro-demo`, https://covaro-app.vercel.app → Supabase project `paradigm-shifters` (ref `fqsqfxshjedljagxytat`). It was the demo; since 26 Nov 2026 it holds Ankit's own candidates (he is admin), so never demo it to anyone else, never reset it, and treat it like live data. A new demo needs a new project.
+  - Migrations 1–14 are applied on the live project. The demo has all but 9 (keep-awake, live-only, and switched off again by 11). Apply new migrations to **both**, live first, in order, **before** pushing code that needs them: every push redeploys every copy.
   - A new firm gets its own Supabase project and Render service: `docs/new-firm-setup.md`. Add each one to this list.
-  - Demo: reset after each demo with `npm run -s demo:reset-sql` (paste into the demo project's SQL editor); it refuses to run where there's no demo data.
+  - Demo data: `npm run -s demo:reset-sql` loads `supabase/demo/` into a demo project (paste into its SQL editor); it refuses to run where there's no demo data. Not for Ankit's trial.
   - The old Netlify site is no longer used
 - Supabase: Postgres, Auth (Google sign-in + email links), Storage (private buckets), cron + edge functions
 - Tailwind v4. Design tokens live in `app/globals.css`; shared UI in `components/ui.tsx` and `components/form.tsx`, so a design pass touches three files
-- Claude API for the agents in phase 3 (not before)
+- Claude API (Anthropic): the CV reader now (`lib/ai/cv-reader.ts`, plain `fetch`, the firm's own `ANTHROPIC_API_KEY`, model `ANTHROPIC_MODEL`, default `claude-haiku-5-5`); the agents in phase 3. Never use any other Anthropic credentials or base URL
 
 Product name: `lib/brand.ts` reads `NEXT_PUBLIC_BRAND_NAME` (badge `NEXT_PUBLIC_BRAND_SHORT`, sign-in line `NEXT_PUBLIC_BRAND_PLACE`, "-" hides it), default Covaro. The firm's own name (invoices, the signature on CV share notes) is `settings.firm_name`. Never hard-code either; use `BRAND_NAME`.
 
@@ -103,6 +103,8 @@ Supabase runs API calls with safeupdate on: an `UPDATE` or `DELETE` without `WHE
 - Practice areas: pick from the `practice_areas` table, never free text. Khyati's list (99 areas, migration 10), each in a `category` for the pickers: `PracticeOptions` (grouped `<option>`s) and `PracticePicker` (search + tick, several) in `components/practice.tsx`. The older broad areas are `active = false`; records that use one keep it, and the pickers still show it on them.
 - Candidate notes: `candidates.notes` is one big free-text box per candidate for pasted call records, edited on the profile (`app/(app)/candidates/[id]/notes.tsx`). Saves check `notes_updated_at`, so a teammate's save is never overwritten. The call form shows earlier calls and these notes beside it.
 - Files: private buckets only (`candidate-files`, `agreements`, `invoices`), opened through signed URLs.
+- CV reader: Candidates → CV inbox (`app/(app)/candidates/inbox`). The browser uploads to `candidate-files/inbox/<uuid>.<ext>` and adds a `cv_inbox` row; `POST /api/cv-inbox/read` (a route, so three can run at once) sends the PDF, or the text of a `.docx` (`mammoth`), to Claude with a forced tool call, and `tidyExtract` in `lib/cv-extract.ts` throws out anything off the list. The team checks it on `/candidates/new?inbox=<id>` (the CV beside the form, likely duplicates with "Add this CV to them"); saving files the CV via `fileInboxCv`. The file keeps its inbox path. Off until an admin turns on `settings.ai_cv_reading`; `CV_READER_FAKE=1` pretends locally. Never record date of birth, age, gender, religion, caste, marital status, family or health from a CV (the prompt says so; keep it).
+- Highlights: `candidates.highlights`, 3 or 4 lines (one per line) from the CV reader or typed, shown on the profile and edited on the candidate form.
 
 ## Phase 1 scope (weeks 1–3): replace the sheets
 
@@ -122,6 +124,8 @@ Build in this order. Each step should be usable on its own.
 - [x] Import (admin): load Odoo and sheet rows (CSV or Excel `.xlsx`, one tab at a time, read in the browser with `exceljs`) into `import_rows`, normalise, auto-merge on phone, email or LinkedIn, and send near-matches and unreadable PQE to a review list
 
 Built ahead of phase 2: placements (from "Offer accepted" on a pipeline card, status updates on Billing), invoices via `create_invoice` with a printable tax invoice (browser print to PDF), payments, team management with PINs in Settings.
+
+Ankit's list (26 Nov 2026), in order: (1) client contacts on mandates + Excel import, done; (2) CV reader, single and bulk, editable details, AI highlights, done; (3) a one-page branded cover (firm logo, summary, highlights) put before the original CV when sharing, behind a tick box; (4) a client portal: link plus one-time code per contact, the CVs shared with that client, feedback, Excel export.
 
 Phase 2 (still to do): invoice PDF stored in the `invoices` bucket, reminder emails, Google Calendar sync, dashboard. Phase 3: AI agents.
 
@@ -144,7 +148,7 @@ Phase 2 (still to do): invoice PDF stored in the `invoices` bucket, reminder ema
 ## Guardrails
 
 - **LinkedIn: no automation of any kind.** No scraping, auto-messaging or browser bots. Khyati's account has been blocked before. Store URLs only.
-- Candidate data is personal data under India's DPDP Act, and client agreements make candidate pay and submissions confidential. Never log personal data to the console or analytics. Never send it to any third-party service except the Claude API in phase 3.
+- Candidate data is personal data under India's DPDP Act, and client agreements make candidate pay and submissions confidential. Never log personal data to the console or analytics. Never send it to any third-party service except the Claude API (the CV reader, and the agents in phase 3), and only once the firm's admin has switched it on.
 - Keep-awake: migration 9 scheduled `pg_cron` + `pg_net` to open `/warm` every 5 minutes so Vercel's free plan didn't sleep; migration 11 switched it off, because Render's Starter plan never sleeps. `/warm` (`app/warm/page.tsx`, public in `proxy.ts`) stays as Render's health check. It reads nothing.
 - The only other outside call is the Mumbai weather check (`lib/weather.ts`, MET Norway, June to mid-October, cached hourly). It sends a city's coordinates and nothing else; keep it that way.
 - RLS stays on for every table. Never use the service role key in the browser.

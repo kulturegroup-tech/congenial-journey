@@ -90,3 +90,13 @@ export async function addPracticeArea(_: ActionState, fd: FormData): Promise<Act
   refreshAll();
   return { ok: true, message: `Added ${name}.` };
 }
+
+/** Admin switch for the CV reader: while off, no CV is sent to the Claude API. */
+export async function setCvReading(on: boolean) {
+  const supabase = await createClient();
+  const { error, count } = await supabase.from("settings").update({ ai_cv_reading: on, updated_at: new Date().toISOString() }, { count: "exact" }).eq("id", true);
+  if (error) return { error: dbError(error) };
+  if (!count) return { error: "Only an admin can change this." };
+  refreshAll();
+  return { ok: true };
+}

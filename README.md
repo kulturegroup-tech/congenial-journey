@@ -7,7 +7,7 @@ Building with Claude Code? Start with `CLAUDE.md`.
 | | App | Supabase project |
 | --- | --- | --- |
 | Paradigm Shifters (live, real data) | https://paradigm-shifters.onrender.com (Render, Starter, Singapore) | `paradigm-shifters-live`, ref `jrpekdeeyzlbmyghwlta`, Mumbai |
-| Demo (fake data only) | https://covaro-app.vercel.app | `paradigm-shifters`, ref `fqsqfxshjedljagxytat`, Mumbai |
+| Ankit Mahajan's trial (real data; was the demo) | https://covaro-app.vercel.app | `paradigm-shifters`, ref `fqsqfxshjedljagxytat`, Mumbai |
 
 **Setting up another firm:** follow `docs/new-firm-setup.md` (about an hour, about $17 a month).
 
@@ -56,7 +56,7 @@ Fictional demo data (28 made-up candidates, 9 mandates, placements, reminders, r
 - Remove: run `supabase/demo/remove_demo_data.sql`. Real rows are never touched
 - Check all three: `npm run test:demo`
 
-Demo data lives in the demo project only. Never load it into a firm's live project.
+Demo data lives in a demo project only. Never load it into a firm's live project, or into Ankit's trial (the old demo project now holds his real data).
 
 ## Database changes
 

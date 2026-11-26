@@ -3,7 +3,7 @@ import Link from "@/components/fast-link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ButtonLink } from "@/components/form";
-import { Avatar, Badge, Card, Empty, Page, PageHeader, TableSkeleton } from "@/components/ui";
+import { Avatar, Badge, Card, Empty, Page, PageHeader, TableSkeleton, Tile } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getSession, getTeamNames } from "@/lib/auth/member";
 import { getFirmNames, getOpenMandates, getPracticeAreas, getTeam } from "@/lib/data/options";
@@ -39,7 +39,7 @@ async function Profile({ params }: { params: Params }) {
   const supabase = await createClient();
   const [cand, notes, phones, emails, calls, tags, priors, pipes, files, acts, team, teamList, mandates, firms, practices, session] = await Promise.all([
     supabase.from("v_candidates").select("*").eq("id", id).maybeSingle(),
-    supabase.from("candidates").select("notes, notes_updated_at, notes_updated_by").eq("id", id).maybeSingle(),
+    supabase.from("candidates").select("notes, notes_updated_at, notes_updated_by, highlights").eq("id", id).maybeSingle(),
     supabase.from("candidate_phones").select("id, phone, source, is_primary").eq("candidate_id", id).order("is_primary", { ascending: false }),
     supabase.from("candidate_emails").select("id, email").eq("candidate_id", id),
     supabase.from("screening_calls").select("*").eq("candidate_id", id).neq("status", "cancelled").order("created_at", { ascending: false }),
@@ -124,6 +124,31 @@ async function Profile({ params }: { params: Params }) {
                   </div>
                 ))}
               </Card>
+            ) : null}
+
+            {notes.data?.highlights ? (
+              <Tile
+                tone="sage"
+                title="What stands out"
+                action={
+                  <Link href={`/candidates/${id}/edit`} className="text-[13px] font-medium text-accent hover:underline">
+                    Edit
+                  </Link>
+                }
+              >
+                <ul className="space-y-1 text-[14px] leading-relaxed">
+                  {notes.data.highlights
+                    .split("\n")
+                    .map((h) => h.replace(/^[-•*·]\s*/, "").trim())
+                    .filter(Boolean)
+                    .map((h, i) => (
+                      <li key={i} className="flex gap-2">
+                        <span aria-hidden className="text-accent/60">•</span>
+                        <span>{h}</span>
+                      </li>
+                    ))}
+                </ul>
+              </Tile>
             ) : null}
 
             <CandidateNotes

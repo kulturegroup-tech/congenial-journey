@@ -241,6 +241,70 @@ export type Database = {
           },
         ]
       }
+      cv_inbox: {
+        Row: {
+          candidate_id: string | null
+          created_at: string
+          error: string | null
+          extracted: Json | null
+          file_name: string
+          file_path: string
+          id: string
+          mime_type: string | null
+          status: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          candidate_id?: string | null
+          created_at?: string
+          error?: string | null
+          extracted?: Json | null
+          file_name: string
+          file_path: string
+          id?: string
+          mime_type?: string | null
+          status?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          candidate_id?: string | null
+          created_at?: string
+          error?: string | null
+          extracted?: Json | null
+          file_name?: string
+          file_path?: string
+          id?: string
+          mime_type?: string | null
+          status?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cv_inbox_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cv_inbox_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "v_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cv_inbox_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       candidate_files: {
         Row: {
           candidate_id: string
@@ -356,6 +420,7 @@ export type Database = {
       }
       candidates: {
         Row: {
+          highlights: string | null
           created_at: string
           current_city: string | null
           current_ctc: number | null
@@ -385,6 +450,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          highlights?: string | null
           created_at?: string
           current_city?: string | null
           current_ctc?: number | null
@@ -414,6 +480,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          highlights?: string | null
           created_at?: string
           current_city?: string | null
           current_ctc?: number | null
@@ -1652,6 +1719,7 @@ export type Database = {
       }
       settings: {
         Row: {
+          ai_cv_reading: boolean
           address: string | null
           bank_details: string | null
           default_cooling_off_months: number
@@ -1670,6 +1738,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_cv_reading?: boolean
           address?: string | null
           bank_details?: string | null
           default_cooling_off_months?: number
@@ -1688,6 +1757,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_cv_reading?: boolean
           address?: string | null
           bank_details?: string | null
           default_cooling_off_months?: number

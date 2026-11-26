@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { ButtonLink, Field, FormMessage, Input, Select, SubmitButton, Textarea } from "@/components/form";
+import { AttachInstead } from "./inbox/widgets";
 import { Card } from "@/components/ui";
 import { CITIES } from "@/lib/constants";
 import { saveCandidate } from "./actions";
@@ -26,6 +27,8 @@ export type CandidateValues = {
   review_note?: string | null;
   phones?: string;
   emails?: string;
+  highlights?: string | null;
+  notes?: string;
 };
 
 const toLakhs = (v: number | null | undefined) => (v == null ? "" : String(+(v / 100_000).toFixed(2)));
@@ -35,11 +38,14 @@ export function CandidateForm({
   practices,
   firms,
   team,
+  inboxId,
 }: {
   values: CandidateValues;
   practices: Practice[];
   firms: string[];
   team: { id: string; full_name: string }[];
+  /** Set when the details came from a CV in the inbox: saving files that CV on the new candidate. */
+  inboxId?: string;
 }) {
   const [state, action] = useActionState(saveCandidate, null);
   const isNew = !values.id;
@@ -47,7 +53,9 @@ export function CandidateForm({
   return (
     <form action={action} className="max-w-4xl space-y-5">
       {values.id ? <input type="hidden" name="id" value={values.id} /> : null}
+      {inboxId ? <input type="hidden" name="inbox_id" value={inboxId} /> : null}
       <FormMessage state={state} />
+      {inboxId && state?.duplicateId && !state.error?.startsWith("Candidate added") ? <AttachInstead inboxId={inboxId} candidateId={state.duplicateId} /> : null}
 
       <Card className="grid gap-4 p-5 md:grid-cols-2">
         <Field label="Full name *">
@@ -97,8 +105,9 @@ export function CandidateForm({
             <Input name="phones" defaultValue={values.phones ?? ""} placeholder="98xxxxxx01, +91 98xxx xxx02" />
           </Field>
           <Field label="Number came from">
-            <Select name="phone_source" defaultValue="manual">
+            <Select name="phone_source" defaultValue={inboxId ? "cv" : "manual"}>
               <option value="manual">Candidate / our records</option>
+              <option value="cv">Their CV</option>
               <option value="weekday">Weekday</option>
             </Select>
           </Field>
@@ -140,10 +149,16 @@ export function CandidateForm({
         <input type="hidden" name="review_note" value={values.review_note ?? ""} />
       </Card>
 
+      <Card className="p-5">
+        <Field label="Highlights" hint={inboxId ? "Read from the CV by AI. Check them against the CV; one point per line." : "What stands out in their CV, one point per line. Shown on their profile."}>
+          <Textarea name="highlights" rows={4} defaultValue={values.highlights ?? ""} className="text-[13.5px] leading-relaxed" />
+        </Field>
+      </Card>
+
       {isNew ? (
         <Card className="p-5">
           <Field label="Notes" hint="Paste the call notes or anything worth remembering. You can add more on their profile later.">
-            <Textarea name="notes" rows={6} className="text-[13.5px] leading-relaxed" />
+            <Textarea name="notes" rows={inboxId ? 9 : 6} defaultValue={values.notes ?? ""} className="text-[13.5px] leading-relaxed" />
           </Field>
         </Card>
       ) : null}

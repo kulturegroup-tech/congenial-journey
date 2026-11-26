@@ -429,7 +429,20 @@ const Mr = await id(`insert into mandates (client_id, title, practice_area, city
 ok((await one(`select count(*)::int as n from activities where mandate_id = $1`, [Mr])).n >= 1, 'recruiter writes still log activity');
 ok((await one(`select count(*)::int as n from notifications where mandate_id = $1`, [Mr])).n >= 0, 'recruiter-created mandate runs re-engagement');
 await fails(`select notify_reengagement('${Mr}')`, /permission denied/, 'internal functions cannot be called over the API');
+// The CV reader: an inbox row per uploaded CV, switched off until an admin turns it on.
+ok((await one(`select ai_cv_reading from settings`)).ai_cv_reading === false, 'reading CVs with AI is off until an admin turns it on');
+const cvIn = await id(`insert into cv_inbox (file_path, file_name, mime_type) values ('inbox/test.pdf', 'Test CV.pdf', 'application/pdf')`);
+const cvRow = await one(`select status, uploaded_by from cv_inbox where id = $1`, [cvIn]);
+ok(cvRow.status === 'uploaded' && cvRow.uploaded_by === R2, 'an uploaded CV waits in the inbox, marked with who added it');
+await q(`update cv_inbox set status = 'ready', extracted = '{"full_name":"Test Person"}' where id = $1`, [cvIn]);
+ok((await one(`select extracted->>'full_name' as n from cv_inbox where id = $1`, [cvIn])).n === 'Test Person', 'a teammate can store what was read');
+await fails(`update cv_inbox set status = 'lost' where id = '${cvIn}'`, /check constraint/, 'an unknown inbox status is refused');
+await q(`delete from cv_inbox where id = $1`, [cvIn]);
+ok((await one(`select count(*)::int as n from cv_inbox where id = $1`, [cvIn])).n === 1, 'only an admin removes an inbox row');
+await q(`update candidates set highlights = 'Leads fund formation work' where id = $1`, [F]);
+ok((await one(`select highlights from candidates where id = $1`, [F])).highlights === 'Leads fund formation work', 'a candidate keeps editable CV highlights');
 await as(OUT);
+ok((await one(`select count(*)::int as n from cv_inbox`)).n === 0, 'an outsider sees no inbox CVs');
 ok((await one(`select count(*)::int as n from candidates`)).n === 0, 'signed-in outsider sees nothing');
 ok((await one(`select count(*)::int as n from settings`)).n === 0, 'outsider cannot read settings');
 await db.exec(`reset role`);

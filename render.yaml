@@ -23,3 +23,6 @@ services:
         value: sb_publishable_pRRhKX_PsAuFA7iCq7BIWQ_u3i1Uh0H
       - key: ALLOWED_EMAIL_DOMAINS
         value: paradigmshifters.in
+      # The firm's own Claude API key, for the CV reader. Secret: Render asks for it; never put it in this file.
+      - key: ANTHROPIC_API_KEY
+        sync: false

@@ -4,7 +4,8 @@ import { ButtonLink } from "@/components/form";
 import { Badge, Card, Page, PageHeader, Table, TableSkeleton } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/member";
-import { ActiveToggle, FirmForm, MemberDialog, PinForm, PracticeAreaForm } from "./forms";
+import { cvReaderKeySet } from "@/lib/ai/cv-reader";
+import { ActiveToggle, CvReadingSwitch, FirmForm, MemberDialog, PinForm, PracticeAreaForm } from "./forms";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -75,6 +76,23 @@ async function SettingsBody() {
       <section>
         <h2 className="mb-2.5 text-[16.5px] font-semibold">Firm details and defaults</h2>
         <Card className="p-5">{settings.data ? <FirmForm s={settings.data} canEdit={isAdmin} /> : <p className="text-muted">Couldn&apos;t load settings.</p>}</Card>
+      </section>
+
+      <section id="cv-reader" className="scroll-mt-24">
+        <h2 className="mb-2.5 text-[16.5px] font-semibold">Reading CVs with AI</h2>
+        <Card className="flex flex-wrap items-start justify-between gap-4 p-5">
+          <div className="max-w-xl space-y-1.5 text-[13.5px]">
+            <p>
+              {settings.data?.ai_cv_reading ? <Badge tone="ok">On</Badge> : <Badge>Off</Badge>}{" "}
+              {cvReaderKeySet() ? <span className="text-muted">Claude API key is set.</span> : <span className="text-warn">The Claude API key isn&apos;t set on the server yet.</span>}
+            </p>
+            <p className="text-muted">
+              When on, CVs dropped into the CV inbox are sent to Anthropic&apos;s Claude API, which reads out the name, contact details, firm, PQE,
+              practice areas and a few highlights for the team to check. While off, nothing is sent.
+            </p>
+          </div>
+          <CvReadingSwitch on={!!settings.data?.ai_cv_reading} canEdit={isAdmin} />
+        </Card>
       </section>
 
       <section>

@@ -42,6 +42,7 @@ in the Supabase Pro organisation. Build it into the yearly AMC.
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | the new project's publishable key |
 | `ALLOWED_EMAIL_DOMAINS` | the firm's email domain |
 | `NEXT_PUBLIC_BRAND_PLACE` | their city for the sign-in page, or `-` to hide it |
+| `ANTHROPIC_API_KEY` | optional: their Claude API key, for the CV reader. Mark it secret |
 
 4. Deploy. The sign-in page should say Covaro.
 
@@ -66,6 +67,8 @@ select id, '<Full Name>', email, true from auth.users where email = '<their emai
 - Invoice prefix (their initials) and **next invoice number 1**
 - Monthly joinings target, when a mandate goes quiet, default cooling-off and CV validity
 - Practice areas: the 99 come with migration 10; add or hide what they don't use
+- Reading CVs with AI: off until their admin turns it on (and `ANTHROPIC_API_KEY` is set). Ask them first:
+  each CV goes to Anthropic's Claude API
 
 ## 5. Check before handing over
 

@@ -22,9 +22,12 @@ export default function CandidatesPage({ searchParams }: { searchParams: SP }) {
         title="Candidates"
         description="Everyone we've mapped, called or placed. Search, filter, and open a profile."
         actions={
-          <ButtonLink href="/candidates/new" variant="primary">
-            Add candidate
-          </ButtonLink>
+          <>
+            <ButtonLink href="/candidates/inbox">CV inbox</ButtonLink>
+            <ButtonLink href="/candidates/new" variant="primary">
+              Add candidate
+            </ButtonLink>
+          </>
         }
       />
       <Page>

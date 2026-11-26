@@ -3,7 +3,7 @@
 import { useActionState, useState, useTransition } from "react";
 import { Button, Dialog, Field, FormMessage, Input, SubmitButton, Textarea } from "@/components/form";
 import type { ActionState } from "@/lib/forms";
-import { addPracticeArea, changeMyPin, saveFirmSettings, saveMember, setMemberActive } from "./actions";
+import { addPracticeArea, changeMyPin, saveFirmSettings, saveMember, setCvReading, setMemberActive } from "./actions";
 
 export function MemberDialog({ member }: { member?: { full_name: string; email: string; is_admin: boolean } }) {
   return (
@@ -169,5 +169,23 @@ export function PracticeAreaForm() {
         <FormMessage state={state} />
       </div>
     </form>
+  );
+}
+
+export function CvReadingSwitch({ on, canEdit }: { on: boolean; canEdit: boolean }) {
+  const [pending, start] = useTransition();
+  const [err, setErr] = useState<string | null>(null);
+  return (
+    <span className="inline-flex items-center gap-3">
+      <Button
+        size="sm"
+        variant={on ? "outline" : "primary"}
+        disabled={!canEdit || pending}
+        onClick={() => start(async () => setErr((await setCvReading(!on)).error ?? null))}
+      >
+        {pending ? "Saving…" : on ? "Turn off" : "Turn on"}
+      </Button>
+      {err ? <span className="text-[12px] text-danger">{err}</span> : null}
+    </span>
   );
 }

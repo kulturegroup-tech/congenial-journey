@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { all, dbError, json, lakhs, linkedinSlug, list, moneyProblem, num, text, type ActionState } from "@/lib/forms";
 import type { Database } from "@/lib/database.types";
+import { fileInboxCv } from "@/lib/cv-inbox";
 
 type Source = Database["public"]["Enums"]["candidate_source"];
 type Route = Database["public"]["Enums"]["prior_route"];
@@ -62,6 +63,7 @@ export async function saveCandidate(_: ActionState, fd: FormData): Promise<Actio
     source: (text(fd, "source") ?? "other") as Source,
     owner_id: text(fd, "owner_id") ?? userId,
     review_note: text(fd, "review_note"),
+    highlights: text(fd, "highlights"),
   };
 
   if (id) {
@@ -102,16 +104,23 @@ export async function saveCandidate(_: ActionState, fd: FormData): Promise<Actio
     .single();
   if (error || !created) return { error: dbError(error) };
 
-  const phoneSource = text(fd, "phone_source") === "weekday" ? "weekday" : "manual";
+  const ps = text(fd, "phone_source");
+  const phoneSource = ps === "weekday" || ps === "cv" ? ps : "manual";
   if (phones.length) {
     const { error: e } = await supabase.from("candidate_phones").insert(
-      phones.map((phone, i) => ({ candidate_id: created.id, phone, raw: rawPhones, source: phoneSource as "weekday" | "manual", is_primary: i === 0 })),
+      phones.map((phone, i) => ({ candidate_id: created.id, phone, raw: rawPhones, source: phoneSource, is_primary: i === 0 })),
     );
     if (e) return { error: dbError(e), duplicateId: created.id };
   }
   if (emails.length) {
     const { error: e } = await supabase.from("candidate_emails").insert(emails.map((email, i) => ({ candidate_id: created.id, email, is_primary: i === 0 })));
     if (e) return { error: dbError(e), duplicateId: created.id };
+  }
+  // Added from the CV inbox: the CV becomes their first CV on file.
+  const inboxId = text(fd, "inbox_id");
+  if (inboxId) {
+    const e = await fileInboxCv(supabase, inboxId, created.id);
+    if (e) return { error: `Candidate added, but the CV wasn't filed: ${e}`, duplicateId: created.id };
   }
   refreshAll();
   redirect(`/candidates/${created.id}`);

@@ -53,6 +53,7 @@ async function EditForm({ params }: { params: Params }) {
         source: c.source ?? undefined,
         owner_id: c.owner_id,
         review_note: c.review_note,
+        highlights: c.highlights,
       }}
       practices={practices}
       firms={firms}
