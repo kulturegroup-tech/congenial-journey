@@ -15,6 +15,15 @@ import type { ActionState } from "@/lib/forms";
 import { exitEntry, moveStage, recordPlacement, reopenEntry, setInterviewAt } from "../actions";
 import { ShareDialog } from "./share-dialog";
 
+const DRAG_TYPE = "application/x-covaro-entry";
+// Runs fn just after the current event (see startDrag). One board per page, so one pending at a time.
+let dragTimer: ReturnType<typeof setTimeout> | undefined;
+function afterThisEvent(fn: () => void) {
+  clearTimeout(dragTimer);
+  dragTimer = setTimeout(fn, 0);
+}
+const cancelPending = () => clearTimeout(dragTimer);
+
 export type Entry = {
   id: string;
   candidate_id: string;
@@ -48,6 +57,15 @@ export function Board({ entries, exitReasons }: { entries: Entry[]; exitReasons:
   const [, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
+  // Chrome cancels a drag when the page changes under the pointer as it starts. Showing the empty
+  // "Drop here" slots moves every card below them (only the top card stayed put, so only it dragged),
+  // so the board changes a moment after the drag has begun, not during it.
+  const startDrag = (id: string) => afterThisEvent(() => setDragId(id));
+  const endDrag = () => {
+    cancelPending();
+    setDragId(null);
+    setOver(null);
+  };
   const [over, setOver] = useState<string | null>(null);
   const [share, setShare] = useState<{ id: string; then?: string } | null>(null);
   const [dropping, setDropping] = useState<Entry | null>(null);
@@ -77,10 +95,9 @@ export function Board({ entries, exitReasons }: { entries: Entry[]; exitReasons:
     });
   }
 
-  function onDrop(target: string) {
-    const e = optimistic.find((x) => x.id === dragId);
-    setDragId(null);
-    setOver(null);
+  function onDrop(target: string, id: string | null) {
+    const e = optimistic.find((x) => x.id === (id || dragId));
+    endDrag();
     if (!e) return;
     if (target === "__drop") setDropping(e);
     else goTo(e, target);
@@ -94,7 +111,7 @@ export function Board({ entries, exitReasons }: { entries: Entry[]; exitReasons:
     onDragLeave: () => setOver((o) => (o === key ? null : o)),
     onDrop: (ev: React.DragEvent) => {
       ev.preventDefault();
-      onDrop(key);
+      onDrop(key, ev.dataTransfer.getData(DRAG_TYPE));
     },
   });
 
@@ -151,11 +168,8 @@ export function Board({ entries, exitReasons }: { entries: Entry[]; exitReasons:
                         key={e.id}
                         e={e}
                         dragging={dragId === e.id}
-                        onDragStart={() => setDragId(e.id)}
-                        onDragEnd={() => {
-                          setDragId(null);
-                          setOver(null);
-                        }}
+                        onDragStart={() => startDrag(e.id)}
+                        onDragEnd={endDrag}
                         onMenu={(ev) => openMenu(ev, menuFor(e))}
                         onNext={() => goTo(e, order[idx(e.stage) + 1])}
                         onShare={() => setShare({ id: e.id })}
@@ -271,6 +285,8 @@ function Card({
       draggable
       onDragStart={(ev) => {
         ev.dataTransfer.effectAllowed = "move";
+        // Firefox only starts a drag that carries some data.
+        ev.dataTransfer.setData(DRAG_TYPE, e.id);
         onDragStart();
       }}
       onDragEnd={onDragEnd}
