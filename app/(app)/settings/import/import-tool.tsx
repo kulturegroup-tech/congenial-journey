@@ -23,9 +23,49 @@ const targets: { key: Target; label: string; guess: RegExp }[] = [
 ];
 
 type Opt = { id: string; label: string };
+type Sheet = { name: string; rows: string[][] };
+
+/**
+ * Every tab of an Excel workbook as rows of text, exactly as the cells show (so a PQE typed
+ * "5.10" stays "5.10", and dates read as they're written). Loaded only when an Excel file is picked.
+ */
+/** A cell as the sheet means it: a linked cell gives its link, a date reads 2026-11-02, a number keeps its decimals. */
+function cellText(cell: { value: unknown; numFmt?: string; text?: string }): string {
+  let v = cell.value;
+  if (v && typeof v === "object" && "result" in v) v = (v as { result: unknown }).result; // a formula: its answer
+  if (v && typeof v === "object" && "hyperlink" in v) {
+    const link = String((v as { hyperlink?: unknown }).hyperlink ?? "").replace(/^mailto:/i, "").trim();
+    if (link) return link; // "profile" linking to LinkedIn → the LinkedIn address
+  }
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  if (typeof v === "number") {
+    const places = /0\.(0+)/.exec(cell.numFmt ?? "")?.[1].length; // PQE shown as 5.10 stays 5.10, not 5.1
+    return places ? v.toFixed(places) : String(v);
+  }
+  return String(cell.text ?? "").trim();
+}
+
+async function readWorkbook(file: File): Promise<Sheet[]> {
+  const ExcelJS = (await import("exceljs")).default;
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(await file.arrayBuffer());
+  return wb.worksheets
+    .map((ws) => {
+      const rows: string[][] = [];
+      ws.eachRow({ includeEmpty: false }, (row) => {
+        const cells: string[] = [];
+        for (let c = 1; c <= ws.columnCount; c++) cells.push(cellText(row.getCell(c)));
+        if (cells.some(Boolean)) rows.push(cells);
+      });
+      return { name: ws.name, rows };
+    })
+    .filter((s) => s.rows.length > 1);
+}
 
 export function ImportTool({ mandates }: { mandates: Opt[] }) {
   const [fileName, setFileName] = useState("");
+  const [sheets, setSheets] = useState<Sheet[]>([]);
+  const [sheetName, setSheetName] = useState("");
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<string[][]>([]);
   const [map, setMap] = useState<Record<Target, string>>({} as Record<Target, string>);
@@ -40,9 +80,31 @@ export function ImportTool({ mandates }: { mandates: Opt[] }) {
   async function load(file: File) {
     setResults(null);
     setError(null);
-    const text = await file.text();
-    const all = parseCsv(text);
-    if (all.length < 2) return setError("That file has no rows. Export the sheet tab (or the Odoo list) as CSV and try again.");
+    setHeaders([]);
+    setSheets([]);
+    const ext = file.name.toLowerCase().split(".").pop();
+    if (ext === "xls") return setError("That's the old Excel format. Open it in Excel and save as .xlsx (or CSV), then pick it again.");
+    if (ext === "xlsx") {
+      let book: Sheet[];
+      try {
+        book = await readWorkbook(file);
+      } catch {
+        return setError("Couldn't read that Excel file. Save it again as .xlsx (or CSV) and try once more.");
+      }
+      if (!book.length) return setError("That workbook has no tabs with rows in it.");
+      setSheets(book);
+      setFileName(file.name);
+      return openTable(book[0].rows, file.name, book[0].name);
+    }
+    const all = parseCsv(await file.text());
+    if (all.length < 2) return setError("That file has no rows. Export the sheet tab (or the Odoo list) as CSV or Excel and try again.");
+    setFileName(file.name);
+    openTable(all, file.name);
+  }
+
+  /** Take one table (a CSV, or one Excel tab): first row is the column names. */
+  function openTable(all: string[][], name: string, tab?: string) {
+    setSheetName(tab ?? "");
     const h = all[0].map((x) => x.trim());
     setHeaders(h);
     setRows(all.slice(1));
@@ -50,8 +112,7 @@ export function ImportTool({ mandates }: { mandates: Opt[] }) {
     for (const t of targets) m[t.key] = h.find((x) => t.guess.test(x)) ?? "";
     setMap(m);
     const odoo = h.some((x) => /applicant'?s name|job position/i.test(x));
-    setFileName(file.name);
-    setBatch(`${odoo ? "odoo" : "sheet"}:${file.name.replace(/\.csv$/i, "")}`);
+    setBatch(`${odoo ? "odoo" : "sheet"}:${name.replace(/\.(csv|xlsx)$/i, "")}${tab ? ` / ${tab}` : ""}`);
     setByPosition({});
     setMandateAll("");
   }
@@ -108,10 +169,34 @@ export function ImportTool({ mandates }: { mandates: Opt[] }) {
     <div className="space-y-5">
       <Card className="p-5">
         <p className="mb-3 text-[13px] text-muted">
-          Export the Odoo list or one sheet tab as <b>CSV</b> (Google Sheets: File → Download → CSV). The file is read in your browser; rows are sent straight to the database.
-          Rows are matched on LinkedIn, phone and email, so importing the same file twice won&apos;t create duplicates.
+          Pick an <b>Excel (.xlsx)</b> or <b>CSV</b> file: the Odoo list, a Google Sheet (File → Download), or any candidate list. The file is read in your browser; rows are
+          sent straight to the database. Rows are matched on LinkedIn, phone and email, so someone you already have isn&apos;t added twice.
         </p>
-        <input type="file" accept=".csv,text/csv" onChange={(e) => e.target.files?.[0] && load(e.target.files[0])} className="text-[13px]" />
+        <input
+          type="file"
+          accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          onChange={(e) => e.target.files?.[0] && load(e.target.files[0])}
+          className="text-[13px]"
+        />
+        {sheets.length > 1 ? (
+          <div className="mt-3 max-w-md">
+            <Field label="Which tab?" hint="Import one tab at a time; a tab is usually one role.">
+              <Select
+                value={sheetName}
+                onChange={(e) => {
+                  const s = sheets.find((x) => x.name === e.target.value);
+                  if (s) openTable(s.rows, fileName, s.name);
+                }}
+              >
+                {sheets.map((s) => (
+                  <option key={s.name} value={s.name}>
+                    {s.name} ({s.rows.length - 1} rows)
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </div>
+        ) : null}
         {error ? <p className="mt-3 rounded-2xl bg-danger-soft px-4 py-2.5 text-[13px] text-danger">{error}</p> : null}
       </Card>
 
@@ -119,7 +204,8 @@ export function ImportTool({ mandates }: { mandates: Opt[] }) {
         <>
           <Card className="p-5">
             <h3 className="mb-1.5 text-[15.5px] font-semibold">
-              {fileName}: {rows.length} rows
+              {fileName}
+              {sheetName ? ` · ${sheetName}` : ""}: {rows.length} rows
             </h3>
             <p className="mb-3 text-[13px] text-muted">Check which column is which. Leave a field blank if the file doesn&apos;t have it.</p>
             <div className="grid gap-3 md:grid-cols-5">

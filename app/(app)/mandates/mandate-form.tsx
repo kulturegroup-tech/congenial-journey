@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import Link from "@/components/fast-link";
 import { ButtonLink, Field, FormMessage, Input, Select, SubmitButton, Textarea } from "@/components/form";
 import { Card } from "@/components/ui";
 import { PracticePicker, type Practice } from "@/components/practice";
-import { CITIES } from "@/lib/constants";
+import { CITIES, CONTACT_ROLE } from "@/lib/constants";
 import { saveMandate } from "./actions";
 
 export type MandateValues = {
@@ -14,6 +15,7 @@ export type MandateValues = {
   role_category?: string;
   practice_area?: string | null;
   practice_areas?: string[];
+  contact_ids?: string[];
   pqe_min?: number | null;
   pqe_max?: number | null;
   grade_label?: string | null;
@@ -33,18 +35,23 @@ export type MandateValues = {
 export function MandateForm({
   values,
   clients,
+  contacts,
   practices,
   team,
   grades,
 }: {
   values: MandateValues;
   clients: { id: string; display_name: string }[];
+  contacts: { id: string; client_id: string; name: string; role: string; email: string | null }[];
   practices: Practice[];
   team: { id: string; full_name: string }[];
   grades: string[];
 }) {
   const [state, action] = useActionState(saveMandate, null);
   const v = values;
+  const [clientId, setClientId] = useState(v.client_id ?? "");
+  const [picked, setPicked] = useState<string[]>(v.contact_ids ?? []);
+  const theirs = contacts.filter((c) => c.client_id === clientId);
   return (
     <form action={action} className="max-w-4xl space-y-5">
       {v.id ? <input type="hidden" name="id" value={v.id} /> : null}
@@ -52,7 +59,15 @@ export function MandateForm({
 
       <Card className="grid gap-4 p-5 md:grid-cols-2">
         <Field label="Client *" hint={clients.length ? undefined : "Add the client under Clients first."}>
-          <Select name="client_id" required defaultValue={v.client_id ?? ""}>
+          <Select
+            name="client_id"
+            required
+            value={clientId}
+            onChange={(e) => {
+              setClientId(e.target.value);
+              setPicked([]);
+            }}
+          >
             <option value="" disabled>
               Pick a client
             </option>
@@ -124,6 +139,43 @@ export function MandateForm({
           name="practice_areas"
           defaultValue={v.practice_areas?.length ? v.practice_areas : v.practice_area ? [v.practice_area] : []}
         />
+      </Card>
+
+      <Card className="p-5">
+        <p className="mb-1.5 text-[13px] font-medium text-ink/80">Client contacts for this role</p>
+        <p className="mb-2.5 text-[12px] text-muted">Who at the client this mandate is with. The first one picked gets the CVs; the rest are copied.</p>
+        {picked.map((cid) => (
+          <input key={cid} type="hidden" name="contact_ids" value={cid} />
+        ))}
+        {!clientId ? (
+          <p className="text-[13px] text-muted">Pick the client first.</p>
+        ) : theirs.length ? (
+          <div className="grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
+            {theirs.map((c) => (
+              <label key={c.id} className="flex cursor-pointer items-center gap-2 text-[13.5px]">
+                <input
+                  type="checkbox"
+                  checked={picked.includes(c.id)}
+                  onChange={() => setPicked((p) => (p.includes(c.id) ? p.filter((x) => x !== c.id) : [...p, c.id]))}
+                  className="accent-[var(--color-accent)]"
+                />
+                <span>
+                  {c.name}
+                  <span className="text-muted"> · {CONTACT_ROLE[c.role] ?? c.role}</span>
+                  {picked[0] === c.id ? <span className="ml-1.5 text-[11.5px] font-medium text-accent">main</span> : null}
+                </span>
+              </label>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[13px] text-muted">
+            No contacts for this client yet.{" "}
+            <Link href={`/clients/${clientId}`} className="text-accent hover:underline">
+              Add them on the client page
+            </Link>
+            .
+          </p>
+        )}
       </Card>
 
       <Card className="p-5">

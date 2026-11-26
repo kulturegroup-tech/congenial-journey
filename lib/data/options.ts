@@ -32,6 +32,13 @@ export const getClients = cache(async () => {
   return data ?? [];
 });
 
+/** Every client's points of contact, for picking a mandate's contacts. */
+export const getClientContacts = cache(async () => {
+  const supabase = await createClient();
+  const { data } = await supabase.from("client_contacts").select("id, client_id, name, role, email").order("name");
+  return data ?? [];
+});
+
 export const getExitReasons = cache(async () => {
   const supabase = await createClient();
   const { data } = await supabase.from("exit_reasons").select("code, label").eq("active", true).order("sort");

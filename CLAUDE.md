@@ -9,7 +9,7 @@ The full spec is the "Paradigm Shifters — Recruitment Platform Build Spec" doc
 - The product is **Covaro**. Deployments of this one repo, each redeploying on every push to `main`:
   - **Paradigm Shifters (live, real data):** Render web service (Starter, Singapore, always on), https://paradigm-shifters.onrender.com (its settings are in `render.yaml`) → Supabase project `paradigm-shifters-live` (ref `jrpekdeeyzlbmyghwlta`, Mumbai). Team: Khyati (admin), Kumar, Kopal. The old Vercel copy (`paradigmshifters.vercel.app`, team kulture4) points at the same database and is to be deleted.
   - **Demo (fake data):** Vercel project `covaro-demo` (moving to Netlify) → Supabase project `paradigm-shifters` (ref `fqsqfxshjedljagxytat`), which holds the demo data from `supabase/demo/`. Priyanshi signs in there as admin. Never put real data in it.
-  - Migrations 1–12 are applied on the live project. The demo has all but 9 (keep-awake, live-only, and switched off again by 11). Apply new migrations to **both**, live first, in order, **before** pushing code that needs them: every push redeploys every copy.
+  - Migrations 1–13 are applied on the live project. The demo has all but 9 (keep-awake, live-only, and switched off again by 11). Apply new migrations to **both**, live first, in order, **before** pushing code that needs them: every push redeploys every copy.
   - A new firm gets its own Supabase project and Render service: `docs/new-firm-setup.md`. Add each one to this list.
   - Demo: reset after each demo with `npm run -s demo:reset-sql` (paste into the demo project's SQL editor); it refuses to run where there's no demo data.
   - The old Netlify site is no longer used
@@ -72,7 +72,7 @@ Supabase runs API calls with safeupdate on: an `UPDATE` or `DELETE` without `WHE
 
 ## Domain glossary
 
-- **Mandate**: a client's open role (e.g. JSA Bengaluru, TMT, 2–4 PQE). It can have several practice areas: `mandates.practice_areas` (in order); `practice_area` is kept as the first by a trigger, so imports can still set just one. Re-engagement counts a fit on any of them. Status: active, on hold, filled, lost. Reopening means setting it back to active; that counts in `reopened_count` and re-runs re-engagement.
+- **Mandate**: a client's open role (e.g. JSA Bengaluru, TMT, 2–4 PQE). It can have several practice areas: `mandates.practice_areas` (in order); `practice_area` is kept as the first by a trigger, so imports can still set just one. Re-engagement counts a fit on any of them. `mandates.contact_ids` names the client's contacts (POCs) the role is with, first = main: a trigger allows only that client's contacts, and the CV share goes to the main one with the others copied. Status: active, on hold, filled, lost. Reopening means setting it back to active; that counts in `reopened_count` and re-runs re-engagement.
 - **PQE**: post-qualification experience, in years. Store `practice_start_date` only; PQE is always computed as of today with `pqe_years()`. Seniority bands: newly qualified (<1), junior (1–3), mid-level (3–6), senior (6+). Clients often state levels as firm grades (A1–A3, SA): keep their words in `grade_label`, and use `firm_grades` to map them to years.
 - **Pipeline stages**, in order: mapped, called, pitched, confirmed (CV received), cv_shared, interview, assignment, final_round, offer, documents, doj_fixed, joined. Leaving at any stage needs an `exit_reason`. "Asked for time" is an exit that needs a `follow_up_on` date and shows up in reminders.
 - **Duplicate**: the candidate's CV already reached the client by any route (another agency, job portal, client website, direct email to anyone at the firm) inside the client's **cooling-off period** (from the agreement; default 6 months). Recorded as `prior_applications`, captured from screening-call field 12.
@@ -119,7 +119,7 @@ Build in this order. Each step should be usable on its own.
 - [x] Mandates: board from `v_mandate_board` (stale ones highlighted), mandate page with intake fields and a pipeline kanban; dragging into an exit asks for the reason
 - [x] CV share dialog: pick CV version and channels, show `check_duplicate` findings, block or ask for an override reason, then open WhatsApp (`wa.me` link) or email with the note filled in. Copy the TA team when the agreement says so
 - [x] Re-engagement: a "Past candidates who fit" panel on each mandate, plus notifications
-- [x] Import (admin): load Odoo and sheet rows into `import_rows`, normalise, auto-merge on phone, email or LinkedIn, and send near-matches and unreadable PQE to a review list
+- [x] Import (admin): load Odoo and sheet rows (CSV or Excel `.xlsx`, one tab at a time, read in the browser with `exceljs`) into `import_rows`, normalise, auto-merge on phone, email or LinkedIn, and send near-matches and unreadable PQE to a review list
 
 Built ahead of phase 2: placements (from "Offer accepted" on a pipeline card, status updates on Billing), invoices via `create_invoice` with a printable tax invoice (browser print to PDF), payments, team management with PINs in Settings.
 

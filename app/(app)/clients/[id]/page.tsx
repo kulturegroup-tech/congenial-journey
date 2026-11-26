@@ -8,6 +8,7 @@ import { Badge, Card, Empty, Page, PageHeader, Table, TableSkeleton } from "@/co
 import { createClient } from "@/lib/supabase/server";
 import { getTeamNames } from "@/lib/auth/member";
 import { ago, formatDate, formatPqeRange } from "@/lib/format";
+import { CONTACT_ROLE } from "@/lib/constants";
 import { AgreementDialog, AgreementFile, ContactDialog, RemoveContact, type Agreement } from "./widgets";
 
 export const metadata: Metadata = { title: "Client" };
@@ -22,12 +23,11 @@ export default function ClientPage({ params }: { params: Params }) {
   );
 }
 
-const roleLabel: Record<string, string> = { partner: "Partner", hr_ta: "HR / TA", other: "Other" };
 
 async function ClientScreen({ params }: { params: Params }) {
   const { id } = await params;
   const supabase = await createClient();
-  const [cq, contacts, agreements, mandates, live, team, firm] = await Promise.all([
+  const [cq, contacts, agreements, mandates, live, team, firm, roles] = await Promise.all([
     supabase.from("clients").select("*, firms(name, kind, aliases)").eq("id", id).maybeSingle(),
     supabase.from("client_contacts").select("*").eq("client_id", id).order("role").order("name"),
     supabase.from("agreements").select("*, agreement_fee_rates(role_category, fee_percent)").eq("client_id", id).order("starts_on", { ascending: false }),
@@ -35,7 +35,10 @@ async function ClientScreen({ params }: { params: Params }) {
     supabase.from("v_live_submissions").select("*").eq("client_id", id).order("shared_at", { ascending: false }),
     getTeamNames(),
     supabase.from("settings").select("home_state_code").maybeSingle(),
+    supabase.from("mandates").select("id, title, contact_ids").eq("client_id", id).in("status", ["active", "on_hold"]),
   ]);
+  // Which open mandates each contact is on.
+  const rolesOf = (contactId: string) => (roles.data ?? []).filter((r) => r.contact_ids.includes(contactId));
   const c = cq.data;
   const home = firm.data?.home_state_code ?? "27";
   if (!c) notFound();
@@ -219,7 +222,7 @@ async function ClientScreen({ params }: { params: Params }) {
                     <li key={p.id}>
                       <div className="flex items-baseline justify-between gap-2">
                         <span className="font-medium">
-                          {p.name} <span className="font-normal text-muted">· {roleLabel[p.role]}</span>
+                          {p.name} <span className="font-normal text-muted">· {CONTACT_ROLE[p.role] ?? p.role}</span>
                         </span>
                         <span className="flex gap-2">
                           <ContactDialog clientId={id} contact={p} />
@@ -232,6 +235,19 @@ async function ClientScreen({ params }: { params: Params }) {
                         </a>
                       ) : null}
                       {p.phone ? <span className="block text-[12.5px] tabular-nums text-muted">{p.phone}</span> : null}
+                      {rolesOf(p.id).length ? (
+                        <span className="block text-[12.5px] text-muted">
+                          On{" "}
+                          {rolesOf(p.id).map((r, i) => (
+                            <span key={r.id}>
+                              {i ? ", " : ""}
+                              <Link href={`/mandates/${r.id}`} className="text-accent hover:underline">
+                                {r.title}
+                              </Link>
+                            </span>
+                          ))}
+                        </span>
+                      ) : null}
                       {p.copy_on_shares ? <Badge tone="accent">Copied on CV shares</Badge> : null}
                     </li>
                   ))}

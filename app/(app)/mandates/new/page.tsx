@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Page, PageHeader, TableSkeleton } from "@/components/ui";
-import { getClients, getGradeLabels, getPracticeAreas, getTeam } from "@/lib/data/options";
+import { getClientContacts, getClients, getGradeLabels, getPracticeAreas, getTeam } from "@/lib/data/options";
 import { MandateForm } from "../mandate-form";
 
 export const metadata: Metadata = { title: "New mandate" };
@@ -24,6 +24,15 @@ export default function NewMandatePage({ searchParams }: { searchParams: SP }) {
 async function NewForm({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const client = Array.isArray(sp.client) ? sp.client[0] : sp.client;
-  const [clients, practices, team, grades] = await Promise.all([getClients(), getPracticeAreas(), getTeam(), getGradeLabels()]);
-  return <MandateForm values={{ client_id: client }} clients={clients} practices={practices} team={team.filter((t) => t.active)} grades={grades} />;
+  const [clients, practices, team, grades, contacts] = await Promise.all([getClients(), getPracticeAreas(), getTeam(), getGradeLabels(), getClientContacts()]);
+  return (
+    <MandateForm
+      values={{ client_id: client }}
+      clients={clients}
+      contacts={contacts}
+      practices={practices}
+      team={team.filter((t) => t.active)}
+      grades={grades}
+    />
+  );
 }

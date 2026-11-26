@@ -983,6 +983,7 @@ export type Database = {
           city: string | null
           client_id: string
           client_profile: string | null
+          contact_ids: string[]
           created_at: string
           grade_label: string | null
           headcount: number
@@ -1013,6 +1014,7 @@ export type Database = {
           city?: string | null
           client_id: string
           client_profile?: string | null
+          contact_ids?: string[]
           created_at?: string
           grade_label?: string | null
           headcount?: number
@@ -1043,6 +1045,7 @@ export type Database = {
           city?: string | null
           client_id?: string
           client_profile?: string | null
+          contact_ids?: string[]
           created_at?: string
           grade_label?: string | null
           headcount?: number

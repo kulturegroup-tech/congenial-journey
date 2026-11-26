@@ -169,6 +169,21 @@ console.log('\nSeveral practice areas on a mandate');
   await q(`update mandates set status = 'lost' where id = $1`, [M3]);
 }
 
+console.log('\nClient contacts on a mandate');
+{
+  const p1 = await id(`insert into client_contacts (client_id, name, role, email) values ($1, 'Priya Partner', 'partner', 'priya@example.law')`, [client]);
+  const p2 = await id(`insert into client_contacts (client_id, name, role, email) values ($1, 'Tara TA', 'hr_ta', 'tara@example.law')`, [client]);
+  const other = await id(`insert into client_contacts (client_id, name) values ($1, 'Someone Southern')`, [client2]);
+  const MC = await id(`insert into mandates (client_id, title, owner_id, contact_ids) values ($1, 'Contacts test role', $2, $3)`, [client, R1, [p2, p1, p2]]);
+  ok((await one(`select contact_ids from mandates where id = $1`, [MC])).contact_ids.join() === [p2, p1].join(), 'a mandate keeps its client’s contacts, first one first, no repeats');
+  await fails(`update mandates set contact_ids = array['${other}']::uuid[] where id = '${MC}'`, /another client/, 'a contact of another client is refused');
+  await q(`delete from client_contacts where id = $1`, [p2]);
+  ok((await one(`select contact_ids from mandates where id = $1`, [MC])).contact_ids.join() === p1, 'removing a contact takes them off the mandate');
+  await q(`update mandates set client_id = $1 where id = $2`, [client2, MC]);
+  ok((await one(`select contact_ids from mandates where id = $1`, [MC])).contact_ids.length === 0, 'moving a mandate to another client drops the old client’s contacts');
+  await q(`update mandates set status = 'lost' where id = $1`, [MC]);
+}
+
 console.log('\nPipeline and duplicate guard');
 const eA = await id(`insert into pipeline_entries (candidate_id, mandate_id) values ($1, $2)`, [A, M]);
 await q(`insert into screening_calls (candidate_id, mandate_id, outcome) values ($1, $2, 'fit')`, [A, M]);

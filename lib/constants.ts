@@ -30,3 +30,6 @@ export const phaseOf = (stage: string) => PHASES.find((p) => (p.stages as readon
 
 /** Stages where a date matters: moving a card here asks when. */
 export const DATED_STAGES = ["interview", "assignment", "final_round"];
+
+/** Labels for a client contact's role (client_contacts.role). */
+export const CONTACT_ROLE: Record<string, string> = { partner: "Partner", hr_ta: "HR / TA", other: "Other" };

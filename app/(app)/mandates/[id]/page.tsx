@@ -7,8 +7,8 @@ import { Badge, Card, Page, PageHeader, TableSkeleton, Tile } from "@/components
 import { createClient } from "@/lib/supabase/server";
 import { getTeamNames } from "@/lib/auth/member";
 import { getExitReasons } from "@/lib/data/options";
-import { stageLabel } from "@/lib/constants";
-import { ago, daysSince, formatDate, formatPqeRange } from "@/lib/format";
+import { CONTACT_ROLE, stageLabel } from "@/lib/constants";
+import { ago, daysSince, formatDate, formatPhone, formatPqeRange } from "@/lib/format";
 import { Board, type Entry } from "./board";
 import { AddCandidate, Matches, StatusControl } from "./panels";
 
@@ -56,9 +56,16 @@ async function MandateScreen({ params }: { params: Params }) {
   const b = bq.data;
 
   const candIds = [...new Set((eq.data ?? []).map((e) => e.candidate_id))];
-  const { data: cands } = candIds.length
-    ? await supabase.from("v_candidates").select("id, full_name, current_firm, pqe_today").in("id", candIds)
-    : { data: [] as { id: string | null; full_name: string | null; current_firm: string | null; pqe_today: number | null }[] };
+  const [{ data: cands }, { data: pocRows }] = await Promise.all([
+    candIds.length
+      ? supabase.from("v_candidates").select("id, full_name, current_firm, pqe_today").in("id", candIds)
+      : Promise.resolve({ data: [] as { id: string | null; full_name: string | null; current_firm: string | null; pqe_today: number | null }[] }),
+    m.contact_ids.length
+      ? supabase.from("client_contacts").select("id, name, role, email, phone").in("id", m.contact_ids)
+      : Promise.resolve({ data: [] as { id: string; name: string; role: string; email: string | null; phone: string | null }[] }),
+  ]);
+  // The client's contacts for this role, in the order they were picked (the first is the main one).
+  const pocs = m.contact_ids.map((cid) => (pocRows ?? []).find((p) => p.id === cid)).filter((p) => p != null);
   const byId = new Map((cands ?? []).map((c) => [c.id, c]));
   const shared = new Set((sq.data ?? []).map((s) => s.pipeline_entry_id));
   const placed = new Map((pq.data ?? []).map((p) => [p.pipeline_entry_id, p.status]));
@@ -120,6 +127,28 @@ async function MandateScreen({ params }: { params: Params }) {
               {b ? ` (${b.days_open} days ago)` : ""}. Last news {ago(m.last_activity_at)}.
               {m.reopened_count > 0 ? ` Reopened ${m.reopened_count}×.` : ""}
             </span>
+            {pocs.length ? (
+              <span className="mt-1 block text-[13.5px]">
+                With{" "}
+                {pocs.map((p, i) => (
+                  <span key={p.id}>
+                    {i ? ", " : ""}
+                    <b className="font-medium text-ink">{p.name}</b>
+                    <span className="text-muted"> ({CONTACT_ROLE[p.role] ?? p.role})</span>
+                    {p.phone ? (
+                      <a href={`tel:${p.phone}`} className="ml-1 text-accent hover:underline">
+                        {formatPhone(p.phone)}
+                      </a>
+                    ) : null}
+                    {p.email ? (
+                      <a href={`mailto:${p.email}`} className="ml-1 text-accent hover:underline">
+                        {p.email}
+                      </a>
+                    ) : null}
+                  </span>
+                ))}
+              </span>
+            ) : null}
           </>
         }
         actions={

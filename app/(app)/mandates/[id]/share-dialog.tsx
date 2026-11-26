@@ -5,6 +5,7 @@ import { BRAND_NAME } from "@/lib/brand";
 import { useActionState, useEffect, useState } from "react";
 import { Button, Dialog, Field, Input, Select, SubmitButton, Textarea } from "@/components/form";
 import { formatDate, formatLakhs, formatPqe } from "@/lib/format";
+import { CONTACT_ROLE } from "@/lib/constants";
 import { cvLink } from "../../candidates/actions";
 import { openFile } from "@/lib/open-file";
 import { shareContext, shareCv, type Finding, type ShareState } from "../actions";
@@ -82,12 +83,21 @@ function ShareForm({ entryId, ctx, onClose, onShared }: { entryId: string; ctx: 
     return r;
   }, null);
   const c = ctx.candidate;
+  // The mandate's own contacts come first: the main one gets the CV, the others are copied,
+  // along with anyone the client wants copied on every share.
+  const pocs = ctx.mandateContacts.filter((cid) => ctx.contacts.some((x) => x.id === cid));
   const partners = ctx.contacts.filter((x) => x.role === "partner" || !x.copy_on_shares);
-  const cc = ctx.contacts.filter((x) => x.copy_on_shares && x.email).map((x) => x.email!);
-  const [toId, setToId] = useState(partners[0]?.id ?? ctx.contacts[0]?.id ?? "");
+  const firstTo = pocs[0] ?? partners[0]?.id ?? ctx.contacts[0]?.id ?? "";
+  const cc = [
+    ...new Set([
+      ...pocs.slice(1).map((cid) => ctx.contacts.find((x) => x.id === cid)?.email),
+      ...ctx.contacts.filter((x) => x.copy_on_shares).map((x) => x.email),
+    ]),
+  ].filter((e): e is string => !!e && e !== ctx.contacts.find((x) => x.id === firstTo)?.email);
+  const [toId, setToId] = useState(firstTo);
   const to = ctx.contacts.find((x) => x.id === toId);
   const [toEmail, setToEmail] = useState(to?.email ?? "");
-  const [ccText, setCcText] = useState(ctx.agreement?.copy_ta_on_partner_shares || cc.length ? cc.join(", ") : "");
+  const [ccText, setCcText] = useState(cc.join(", "));
   const [fileId, setFileId] = useState(ctx.files[0]?.id ?? "");
   const [reason, setReason] = useState("");
   const [reasonNote, setReasonNote] = useState("");
@@ -220,7 +230,7 @@ function ShareForm({ entryId, ctx, onClose, onShared }: { entryId: string; ctx: 
             >
               {ctx.contacts.map((x) => (
                 <option key={x.id} value={x.id}>
-                  {x.name} ({x.role === "hr_ta" ? "HR/TA" : x.role})
+                  {x.name} ({CONTACT_ROLE[x.role] ?? x.role}){pocs.includes(x.id) ? " · this role" : ""}
                 </option>
               ))}
             </Select>

@@ -35,6 +35,8 @@ export async function saveMandate(_: ActionState, fd: FormData): Promise<ActionS
     role_category: (text(fd, "role_category") ?? "legal") as RoleCategory,
     // All the areas picked, in order; the database keeps practice_area as the first.
     practice_areas: all(fd, "practice_areas"),
+    // The client's contacts this role is with; the database checks they belong to this client.
+    contact_ids: all(fd, "contact_ids"),
     pqe_min: pqeMin,
     pqe_max: pqeMax,
     grade_label: text(fd, "grade_label"),
@@ -167,7 +169,7 @@ export async function shareContext(entryId: string) {
   const { supabase } = await me();
   const { data: e } = await supabase
     .from("pipeline_entries")
-    .select("id, candidate_id, mandate_id, mandates(title, city, client_id, clients(display_name))")
+    .select("id, candidate_id, mandate_id, mandates(title, city, client_id, contact_ids, clients(display_name))")
     .eq("id", entryId)
     .single();
   if (!e || !e.mandates) return { error: "Pipeline entry not found." };
@@ -193,6 +195,7 @@ export async function shareContext(entryId: string) {
     files: files.data ?? [],
     findings: (dup.data ?? []) as Finding[],
     contacts: contacts.data ?? [],
+    mandateContacts: e.mandates.contact_ids ?? [],
     agreement: agreement.data,
   };
 }
