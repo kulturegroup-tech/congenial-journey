@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { CommandPalette } from "./command-palette";
 import { ContextMenuProvider } from "./context-menu";
 import { FreshOnReturn } from "./fresh-on-return";
+import { ThemeWatcher } from "./theme";
 import { LogCallButton } from "./log-call";
 import { NavProgress } from "./nav-progress";
 import { Ripples } from "./motion";
@@ -19,6 +20,7 @@ export function Providers({ children }: { children: ReactNode }) {
         <Ripples />
         <NavProgress />
         <FreshOnReturn />
+        <ThemeWatcher />
       </ContextMenuProvider>
     </ToastProvider>
   );

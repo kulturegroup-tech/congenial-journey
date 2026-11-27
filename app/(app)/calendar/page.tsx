@@ -19,7 +19,7 @@ type Ev = { key: string; day: string; at?: string; kind: Kind; title: string; su
 const kinds: { kind: Kind; label: string; dot: string }[] = [
   { kind: "call", label: "Calls", dot: "bg-[#5b7f9c]" },
   { kind: "interview", label: "Interviews", dot: "bg-lilac-ink" },
-  { kind: "join", label: "Joinings", dot: "bg-hero" },
+  { kind: "join", label: "Joinings", dot: "bg-hero dark:bg-ok" },
   { kind: "follow", label: "Follow-ups", dot: "bg-[#c28766]" },
   { kind: "pay", label: "Payments due", dot: "bg-[#b59a55]" },
 ];
@@ -29,7 +29,7 @@ const evStyle: Record<Kind, string> = {
   follow: "bg-clay before:bg-[#c28766]",
   pay: "bg-sand before:bg-[#b59a55]",
   replace: "bg-white ring-1 ring-line before:bg-faint",
-  join: "bg-hero text-white before:hidden",
+  join: "bg-hero text-on-hero before:hidden",
 };
 
 export default function CalendarPage({ searchParams }: { searchParams: SP }) {
@@ -233,7 +233,7 @@ async function CalendarScreen({ searchParams }: { searchParams: SP }) {
               >
                 <span className={`mb-1 block px-1 text-[13px] font-semibold ${day === today ? "text-accent" : ""}`}>{Number(day.slice(8))}</span>
                 {list.slice(0, 3).map((e) => (
-                  <span key={e.key} className={`mb-1 block truncate rounded-lg px-2 py-0.5 text-[11.5px] font-medium ${e.kind === "join" ? "bg-hero text-white" : e.kind === "interview" ? "bg-lilac" : e.kind === "follow" ? "bg-clay" : e.kind === "pay" ? "bg-sand" : "bg-mist"} ${e.done ? "opacity-50" : ""}`}>
+                  <span key={e.key} className={`mb-1 block truncate rounded-lg px-2 py-0.5 text-[11.5px] font-medium ${e.kind === "join" ? "bg-hero text-on-hero" : e.kind === "interview" ? "bg-lilac" : e.kind === "follow" ? "bg-clay" : e.kind === "pay" ? "bg-sand" : "bg-mist"} ${e.done ? "opacity-50" : ""}`}>
                     {e.at ? `${formatTime(e.at)} ` : ""}
                     {e.title}
                   </span>
@@ -249,7 +249,7 @@ async function CalendarScreen({ searchParams }: { searchParams: SP }) {
             const list = byDay.get(day) ?? [];
             const isToday = day === today;
             return (
-              <div key={day} className={`min-h-[480px] rounded-3xl p-2.5 transition-colors ${isToday ? "bg-surface ring-[1.5px] ring-ink" : "bg-side hover:bg-[#e8ece5]"}`}>
+              <div key={day} className={`min-h-[480px] rounded-3xl p-2.5 transition-colors ${isToday ? "bg-surface ring-[1.5px] ring-ink" : "bg-side hover:bg-line/50"}`}>
                 <Link href={href({ view: "day", d: day })} className="flex items-baseline gap-1.5 px-1.5 pb-3 pt-1">
                   <span className="text-[13px] font-medium text-muted">{formatLongDay(day).split(" ")[0].slice(0, view === "day" ? 20 : 3)}</span>
                   <b className="text-[22px] font-semibold">{Number(day.slice(8))}</b>

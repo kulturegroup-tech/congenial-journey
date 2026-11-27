@@ -29,6 +29,7 @@
   --color-danger-soft: #f6e1dc;
   --color-ok: #2f6b4f;
   --color-ok-soft: #e1ede3;
+  --color-on-hero: #ffffff; /* text on the forest hero blocks, white in both looks */
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
@@ -41,6 +42,82 @@
 body {
   background: var(--color-surface);
   color: var(--color-ink);
+}
+
+/* Looks. The light look above is the default; html[data-theme] is set before the first paint by the
+   script in app/layout.tsx, from the person's choice in Settings (System, Light or Dark).
+   Dark is "Forest dusk": a lifted dark green, with sage buttons. Screens only: printing stays light. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@layer base {
+  @media screen {
+    [data-theme="dark"] {
+      color-scheme: dark;
+      --color-surface: #1e2924;
+      --color-white: #27342e; /* cards: bg-white is a card in this app, so it follows the look */
+      --color-canvas: #2c3a33;
+      --color-side: #1a241f;
+      --color-ink: #eaf0ec;
+      --color-muted: #a9b7af;
+      --color-faint: #6b7a72;
+      --color-line: #34423b;
+      --color-accent: #c9d6a0;
+      --color-accent-soft: #2f4136;
+      --color-hero: #24342c;
+      --color-sage: #c9d6a0;
+      --color-mist: #26333d;
+      --color-clay: #3a2d28;
+      --color-sand: #383223;
+      --color-lilac: #302a3d;
+      --color-lilac-ink: #c7b9e8;
+      --color-warn: #ebb06d;
+      --color-warn-soft: #3d2f1e;
+      --color-danger: #f09a8b;
+      --color-danger-soft: #442823;
+      --color-ok: #9bd8b6;
+      --color-ok-soft: #26392f;
+    }
+    [data-theme="dark"] .avatar {
+      filter: saturate(0.85) brightness(0.92);
+    }
+  }
+
+  /* The sidebar is dark forest in both looks. Anything that opens out of it (the bell) matches it. */
+  .forest-side {
+    color-scheme: dark;
+    color: var(--color-ink);
+    --color-side: #1b2a23;
+    --color-white: #24352c;
+    --color-canvas: #24352c;
+    --color-surface: #1d2b24;
+    --color-ink: #e4ebe6;
+    --color-muted: #9baba2;
+    --color-faint: #5d6a63;
+    --color-line: #2a3630;
+    --color-accent: #a9cdb2;
+    --color-accent-soft: #223429;
+    --color-sage: #c9d6a0;
+    --color-ok: #8fd0ad;
+    --color-ok-soft: #1c3026;
+    --color-danger: #ec8b7c;
+    --color-danger-soft: #3a201c;
+  }
+
+  /* Paper: documents (the tax invoice) stay black on white whatever the look. */
+  .paper {
+    color-scheme: light;
+    color: var(--color-ink);
+    --color-surface: #ffffff;
+    --color-white: #ffffff;
+    --color-canvas: #f4f6f3;
+    --color-side: #eef1ec;
+    --color-ink: #1d2a24;
+    --color-muted: #66736c;
+    --color-faint: #a3ada7;
+    --color-line: #e2e7e1;
+    --color-accent: #24453a;
+    --color-accent-soft: #e2ebdd;
+  }
 }
 
 ::selection {
@@ -113,6 +190,8 @@ body {
 .btn-fill[data-variant="secondary"] { --fill: color-mix(in srgb, var(--color-accent) 13%, transparent); }
 .btn-fill[data-variant="outline"] { --fill: var(--color-accent-soft); }
 .btn-fill[data-variant="ghost"] { --fill: color-mix(in srgb, var(--color-accent) 9%, transparent); }
+/* In the dark look the primary fill lightens instead of darkening. */
+[data-theme="dark"] .btn-fill[data-variant="primary"] { --fill: color-mix(in srgb, var(--color-accent) 78%, #fff); }
 .btn-fill[data-variant="outline"]:hover,
 .btn-fill[data-variant="ghost"]:hover,
 .btn-fill[data-variant="secondary"]:hover {

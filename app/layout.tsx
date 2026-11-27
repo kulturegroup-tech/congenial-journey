@@ -4,6 +4,7 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 import { BRAND_NAME } from "@/lib/brand";
+import { THEME_SCRIPT } from "@/lib/theme";
 
 // Display serif for page titles and greetings. Everything else is Geist.
 const instrument = localFont({ src: "./fonts/InstrumentSerif-Regular.woff2", variable: "--font-instrument", weight: "400", display: "swap" });
@@ -16,7 +17,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-IN" className={`${GeistSans.variable} ${GeistMono.variable} ${instrument.variable} h-full antialiased`}>
+    // suppressHydrationWarning: THEME_SCRIPT sets data-theme on <html> before React loads.
+    <html lang="en-IN" className={`${GeistSans.variable} ${GeistMono.variable} ${instrument.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="min-h-full font-sans text-[14px]">{children}</body>
     </html>
   );

@@ -11,16 +11,16 @@ export default function LoginPage() {
   if (!isSupabaseConfigured) return <SetupNotice />;
   return (
     <div className="grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
-      <section className="relative hidden flex-col justify-between overflow-hidden bg-hero p-12 text-white lg:flex">
+      <section className="relative hidden flex-col justify-between overflow-hidden bg-hero p-12 text-on-hero lg:flex">
         <div className="flex items-center gap-2.5">
           <span className="grid h-9 w-9 place-items-center rounded-[11px] bg-sage text-[13px] font-semibold text-hero">{BRAND_SHORT}</span>
           <span className="text-[16px] font-semibold">{BRAND_NAME}</span>
         </div>
         <div>
           <p className="max-w-md font-display text-[56px] leading-[1.02]">Every lawyer you&apos;ve spoken to, ready when the right mandate opens.</p>
-          <p className="mt-5 max-w-sm text-[15px] text-white/65">Calls, mandates, CV shares, invoices and suggestions, in one place for the team.</p>
+          <p className="mt-5 max-w-sm text-[15px] text-on-hero/65">Calls, mandates, CV shares, invoices and suggestions, in one place for the team.</p>
         </div>
-        {BRAND_PLACE ? <p className="text-[12.5px] text-white/45">{BRAND_PLACE}</p> : <span />}
+        {BRAND_PLACE ? <p className="text-[12.5px] text-on-hero/45">{BRAND_PLACE}</p> : <span />}
       </section>
       <section className="flex items-center justify-center p-8">
         <div className="w-full max-w-sm">

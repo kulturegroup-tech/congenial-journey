@@ -11,7 +11,7 @@ const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).jo
 
 /** Filled, tonal fields: no borders until you focus. */
 export const inputClass =
-  "w-full rounded-xl border border-transparent bg-canvas px-3.5 py-2.5 outline-none transition-[background,border-color,box-shadow] duration-150 placeholder:text-faint hover:bg-[#eef1ec] focus:border-accent/30 focus:bg-surface focus:shadow-[0_0_0_4px_rgb(36_69_58/0.08)] disabled:opacity-60";
+  "w-full rounded-xl border border-transparent bg-canvas px-3.5 py-2.5 outline-none transition-[background,border-color,box-shadow] duration-150 placeholder:text-faint hover:bg-side focus:border-accent/30 focus:bg-surface focus:shadow-[0_0_0_4px_rgb(36_69_58/0.08)] disabled:opacity-60";
 
 export function Field({ label, hint, children, className }: { label: string; hint?: ReactNode; children: ReactNode; className?: string }) {
   return (

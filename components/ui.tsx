@@ -160,7 +160,7 @@ export function Avatar({ name, size = 34, className }: { name: string; size?: nu
   for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   return (
     <span
-      className={cx("grid shrink-0 place-items-center rounded-full font-semibold text-ink/80", avatarTones[h % avatarTones.length], className)}
+      className={cx("avatar grid shrink-0 place-items-center rounded-full font-semibold text-[#1d2a24]/80", avatarTones[h % avatarTones.length], className)}
       style={{ width: size, height: size, fontSize: Math.round(size * 0.34) }}
     >
       {initials || "?"}

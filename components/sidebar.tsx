@@ -19,7 +19,7 @@ const nav = [
 
 export function Sidebar({ footer, top }: { footer?: ReactNode; top?: ReactNode }) {
   return (
-    <aside className="sticky top-0 flex h-screen w-[248px] shrink-0 flex-col border-r border-line bg-side">
+    <aside className="forest-side sticky top-0 z-30 flex h-screen w-[248px] shrink-0 flex-col border-r border-line bg-side">
       <div className="flex items-center justify-between gap-1 pb-6 pl-5 pr-3 pt-6">
         <Link href="/today" className="flex items-center gap-2.5">
           <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-accent text-[12px] font-semibold tracking-wide text-white">{BRAND_SHORT}</span>

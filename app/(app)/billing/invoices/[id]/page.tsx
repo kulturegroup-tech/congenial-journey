@@ -65,7 +65,7 @@ async function Invoice({ params }: { params: Params }) {
       </div>
 
       <Page>
-        <div className="print-sheet mx-auto max-w-[800px] rounded-xl border border-line bg-white p-10 text-[13px] text-black">
+        <div className="paper print-sheet mx-auto max-w-[800px] rounded-xl border border-line bg-white p-10 text-[13px] text-black">
           <div className="flex justify-between gap-6">
             <div>
               <p className="text-[20px] font-semibold">{s?.firm_name ?? BRAND_NAME}</p>
