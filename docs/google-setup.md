@@ -51,8 +51,8 @@ The team list in Settings shows who is connected.
   data control → API controls** and turn on trusting internal, domain-owned apps (or mark Covaro as trusted there).
 - **"That was a different Google account":** you picked a personal Gmail. Connect again with your work account.
 - **"Some boxes were unticked":** connect again and leave all the boxes ticked.
-- **Someone leaves:** remove them from the team in Covaro; their connection stops working. They can also press Disconnect,
-  and the admin can remove Covaro's access in the Google admin console.
+- **Someone leaves:** ask them to press Disconnect in Settings, then deactivate them in Covaro. Deactivating alone
+  doesn't cancel the Google connection; if they've already gone, suspending their Google account cuts Covaro off too.
 
 ## What Covaro can and can't do with it
 
