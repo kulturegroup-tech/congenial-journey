@@ -3,12 +3,12 @@
 import Link from "@/components/fast-link";
 import { BRAND_NAME } from "@/lib/brand";
 import { useActionState, useEffect, useState } from "react";
-import { Button, Dialog, Field, Input, Select, SubmitButton, Textarea } from "@/components/form";
+import { Button, ButtonAnchor, Dialog, Field, Input, Select, SubmitButton, Textarea } from "@/components/form";
 import { formatDate, formatLakhs, formatPqe } from "@/lib/format";
 import { CONTACT_ROLE } from "@/lib/constants";
 import { cvLink } from "../../candidates/actions";
 import { openFile } from "@/lib/open-file";
-import { shareContext, shareCv, type Finding, type ShareState } from "../actions";
+import { resendShareEmail, shareContext, shareCv, type Finding, type ShareState } from "../actions";
 import { coverNote, isPdfFile, makeCoverFile, saveBlob } from "./cover";
 
 // The cover tick is remembered per browser (firms that always use it needn't tick it each time).
@@ -21,6 +21,24 @@ const rememberedCover = () => {
     return false;
   }
 };
+// "Send from my Gmail" starts on once someone has connected Google, unless they turned it off here.
+const GMAIL_KEY = "covaro.share.gmail";
+const rememberedGmail = () => {
+  try {
+    return localStorage.getItem(GMAIL_KEY) !== "0";
+  } catch {
+    return true;
+  }
+};
+const remember = (key: string, on: boolean) => {
+  try {
+    localStorage.setItem(key, on ? "1" : "0");
+  } catch {
+    // Private mode: just don't remember.
+  }
+};
+
+type EmailResult = NonNullable<NonNullable<ShareState>["email"]>;
 
 type Ctx = Awaited<ReturnType<typeof shareContext>>;
 type Loaded = Exclude<Ctx, { error: string }>;
@@ -123,12 +141,17 @@ function ShareForm({ entryId, ctx, onClose, onShared }: { entryId: string; ctx: 
   const file = ctx.files.find((f) => f.id === fileId);
   const pickCover = (on: boolean) => {
     setCover(on);
-    try {
-      localStorage.setItem(COVER_KEY, on ? "1" : "0");
-    } catch {
-      // Private mode: just don't remember.
-    }
+    remember(COVER_KEY, on);
   };
+  // Sending from the sharer's own Gmail, once they've connected Google in Settings.
+  const canGmail = ctx.gmail.ready && !!ctx.gmail.email;
+  const [gmailOn, setGmailOn] = useState(rememberedGmail);
+  const pickGmail = (on: boolean) => {
+    setGmailOn(on);
+    remember(GMAIL_KEY, on);
+  };
+  const viaGmail = canGmail && gmailOn && channels.includes("email");
+  const [retry, setRetry] = useState<{ busy: boolean; result: EmailResult | null }>({ busy: false, result: null });
   const previewCover = () =>
     openFile(async () => {
       const r = await makeCoverFile(ctx, fileId, withMoney);
@@ -175,7 +198,8 @@ function ShareForm({ entryId, ctx, onClose, onShared }: { entryId: string; ctx: 
 
   const blocking = ctx.findings.some((f) => f.blocking) || !!state?.blocked?.length;
   const toggle = (ch: string) => setChannels(channels.includes(ch) ? channels.filter((x) => x !== ch) : [...channels, ch]);
-  const subject = `${c?.full_name} · ${ctx.mandate.title}${ctx.mandate.city ? `, ${ctx.mandate.city}` : ""}`;
+  const [subject, setSubject] = useState(`${c?.full_name} · ${ctx.mandate.title}${ctx.mandate.city ? `, ${ctx.mandate.city}` : ""}`);
+  const mail = { to: toEmail, cc: ccText, subject, note, cover, withMoney };
   const mailto = `mailto:${encodeURIComponent(toEmail)}?${new URLSearchParams({ ...(ccText ? { cc: ccText } : {}), subject, body: note })
     .toString()
     .replace(/\+/g, "%20")}`;
@@ -183,31 +207,76 @@ function ShareForm({ entryId, ctx, onClose, onShared }: { entryId: string; ctx: 
   const whatsapp = `https://wa.me/${waPhone}?text=${encodeURIComponent(note)}`;
 
   if (state?.ok) {
+    const email = retry.result ?? state.email ?? null;
+    const sent = email?.sent ? email : null;
+    const ccCount = ccText.split(/[,;\n]+/).filter((x) => x.trim()).length;
+    const kept = (
+      <>
+        This CV stays ours at {ctx.mandate.client} until <b>{formatDate(state.validUntil!)}</b>.
+      </>
+    );
+    const tryAgain = async () => {
+      setRetry({ busy: true, result: null });
+      const result = await resendShareEmail(state.shareId!, mail).catch(() => ({ sent: false as const, error: `Couldn't reach ${BRAND_NAME}. Check the internet and try again.` }));
+      setRetry({ busy: false, result });
+    };
+    // Files to attach by hand: whenever the email didn't go from Gmail, and for WhatsApp.
+    const handFiles = !sent || channels.includes("whatsapp");
     return (
       <div className="space-y-4">
-        <p className="rounded-2xl bg-ok-soft px-4 py-2.5 text-ok">
-          Share logged. This CV stays ours at {ctx.mandate.client} until <b>{formatDate(state.validUntil!)}</b>.
-        </p>
-        <p className="text-[13px] text-muted">
-          Now send it. Attach the {cover && isPdfFile(file) ? "PDF (cover and CV)" : cover ? "cover and the CV" : "CV"} to the email or WhatsApp yourself; the note is filled in.
-        </p>
+        {sent ? (
+          <p className="rounded-2xl bg-ok-soft px-4 py-2.5 text-ok">
+            Sent from {sent.from || "your Gmail"} to {toEmail}
+            {ccCount ? `, copying ${ccCount}` : ""}, {cover && isPdfFile(file) ? "with the CV attached and our cover page in front" : cover ? "with our cover page and the CV attached" : "with the CV attached"}.{" "}
+            {kept}
+          </p>
+        ) : (
+          <p className="rounded-2xl bg-ok-soft px-4 py-2.5 text-ok">Share logged. {kept}</p>
+        )}
+        {email && !email.sent ? (
+          <p className="rounded-2xl bg-danger-soft px-4 py-2.5 text-[13px] text-danger">
+            The email didn&apos;t go: {email.error}
+          </p>
+        ) : null}
+        {!sent ? (
+          <p className="text-[13px] text-muted">
+            {email ? "Try again, or send it yourself: attach" : "Now send it. Attach"} the {cover && isPdfFile(file) ? "PDF (cover and CV)" : cover ? "cover and the CV" : "CV"} to the
+            email or WhatsApp; the note is filled in.
+          </p>
+        ) : channels.includes("whatsapp") ? (
+          <p className="text-[13px] text-muted">For WhatsApp, attach the file yourself; the note is filled in.</p>
+        ) : null}
         <div className="flex flex-wrap gap-2">
-          {channels.includes("email") ? (
-            <a href={mailto} className="state inline-flex h-10 items-center rounded-full bg-accent px-4 font-medium text-white">
-              Open email
-            </a>
+          {sent ? (
+            <ButtonAnchor variant="primary" href={sent.url} target="_blank" rel="noreferrer">
+              Open in Gmail
+            </ButtonAnchor>
+          ) : null}
+          {email && !email.sent ? (
+            <Button variant="primary" onClick={tryAgain} disabled={retry.busy}>
+              {retry.busy ? "Sending…" : "Try again"}
+            </Button>
+          ) : null}
+          {!sent && channels.includes("email") ? (
+            email ? (
+              <ButtonAnchor href={mailto}>Open email instead</ButtonAnchor>
+            ) : (
+              <a href={mailto} className="state inline-flex h-10 items-center rounded-full bg-accent px-4 font-medium text-white">
+                Open email
+              </a>
+            )
           ) : null}
           {channels.includes("whatsapp") ? (
             <a href={whatsapp} target="_blank" rel="noreferrer" className="state inline-flex h-10 items-center rounded-full bg-accent px-4 font-medium text-white">
               Open WhatsApp
             </a>
           ) : null}
-          {cover ? (
+          {handFiles && cover ? (
             <Button onClick={downloadCover} disabled={coverBusy}>
               {coverBusy ? "Making the PDF…" : isPdfFile(file) ? "Download CV with cover" : "Download cover"}
             </Button>
           ) : null}
-          {fileId ? (
+          {handFiles && fileId ? (
             <Button variant={cover ? "ghost" : "outline"} onClick={async () => setFileErr(await openFile(() => cvLink(fileId)))}>
               {cover && isPdfFile(file) ? "CV only" : "Download CV"}
             </Button>
@@ -226,6 +295,17 @@ function ShareForm({ entryId, ctx, onClose, onShared }: { entryId: string; ctx: 
     <form action={action} className="space-y-4">
       <input type="hidden" name="entry_id" value={entryId} />
       <input type="hidden" name="recipients" value={[toEmail && `To: ${toEmail}`, ccText && `CC: ${ccText}`].filter(Boolean).join("; ")} />
+      {viaGmail ? (
+        <>
+          <input type="hidden" name="send_gmail" value="on" />
+          <input type="hidden" name="to_email" value={toEmail} />
+          <input type="hidden" name="cc_email" value={ccText} />
+          <input type="hidden" name="subject" value={subject} />
+          <input type="hidden" name="note" value={note} />
+          {cover ? <input type="hidden" name="cover" value="on" /> : null}
+          {cover && withMoney ? <input type="hidden" name="with_money" value="on" /> : null}
+        </>
+      ) : null}
 
       <div>
         <p className="font-medium">
@@ -288,6 +368,30 @@ function ShareForm({ entryId, ctx, onClose, onShared }: { entryId: string; ctx: 
         </Field>
       </div>
 
+      {channels.includes("email") && canGmail ? (
+        <div className="rounded-2xl bg-side/70 px-4 py-3 text-[13px]">
+          <label className="flex items-center gap-2 font-medium">
+            <input type="checkbox" checked={gmailOn} onChange={(e) => pickGmail(e.target.checked)} />
+            Send it from my Gmail ({ctx.gmail.email})
+          </label>
+          {gmailOn && ctx.files.length ? (
+            <p className="ml-6 mt-1 text-muted">
+              Goes out when you press the button, with the {cover ? "cover and CV" : "CV"} attached, and sits in your Sent folder like any email you write. Replies come to
+              you.
+            </p>
+          ) : null}
+          {gmailOn && !ctx.files.length ? <p className="ml-6 mt-1 text-warn">There&apos;s no CV on file to attach. Upload it on their profile first, or untick this.</p> : null}
+        </div>
+      ) : channels.includes("email") && ctx.gmail.ready ? (
+        <p className="text-[12px] text-muted">
+          {ctx.gmail.broken ? "Your Google connection needs to be made again" : "Connect your Google account"} in{" "}
+          <Link href="/settings#google" className="underline">
+            Settings
+          </Link>{" "}
+          to send shares straight from your Gmail, with the CV attached.
+        </p>
+      ) : null}
+
       <div className="rounded-2xl bg-side/70 px-4 py-3 text-[13px]">
         <label className="flex items-center gap-2 font-medium">
           <input type="checkbox" checked={cover} onChange={(e) => pickCover(e.target.checked)} />
@@ -315,12 +419,18 @@ function ShareForm({ entryId, ctx, onClose, onShared }: { entryId: string; ctx: 
                 .
               </p>
             ) : null}
+            {viaGmail && file && !isPdfFile(file) ? <p className="text-[12px] text-muted">The CV is a Word file, so the cover goes as a separate PDF beside it.</p> : null}
             {!ctx.highlights ? <p className="text-[12px] text-warn">No highlights for them yet. Add a few on their profile (Edit) so the cover says what stands out.</p> : null}
             {coverMsg ? <p className="text-[12px] text-danger">{coverMsg}</p> : null}
           </div>
         ) : null}
       </div>
 
+      {channels.includes("email") ? (
+        <Field label="Subject">
+          <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
+        </Field>
+      ) : null}
       <Field label="Note">
         <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={8} />
       </Field>
@@ -346,8 +456,8 @@ function ShareForm({ entryId, ctx, onClose, onShared }: { entryId: string; ctx: 
 
       {state?.error ? <p className="rounded-2xl bg-danger-soft px-4 py-2.5 text-[13px] text-danger">{state.error}</p> : null}
       <div className="flex items-center gap-2">
-        <SubmitButton variant={blocking ? "danger" : "primary"} pendingText="Checking…">
-          {blocking ? "Send anyway" : "Mark as shared"}
+        <SubmitButton variant={blocking ? "danger" : "primary"} pendingText={viaGmail ? "Sending…" : "Checking…"}>
+          {blocking ? "Send anyway" : viaGmail ? "Share and send email" : "Mark as shared"}
         </SubmitButton>
         <Button variant="ghost" onClick={onClose}>
           Cancel

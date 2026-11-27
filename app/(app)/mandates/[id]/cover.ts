@@ -1,28 +1,11 @@
 // Builds the cover page (and the CV joined behind it) in the browser, from what the share dialog
 // already loaded. The logo and the CV come straight from private storage; nothing leaves the computer.
+// (Sending from Gmail builds the same cover on the server instead: lib/share-email.ts.)
 import { createClient } from "@/lib/supabase/client";
-import { formatDate, formatLakhs, formatPqe } from "@/lib/format";
 import type { CoverResult } from "@/lib/cover-pdf";
+import { coverFileName, coverInput, isPdfFile, logoTypeOf, type CoverSource } from "@/lib/cover-input";
 
-export type CoverSource = {
-  firm: string | null;
-  logoPath: string | null;
-  highlights: string | null;
-  sharer: string | null;
-  candidate: {
-    full_name: string | null;
-    designation: string | null;
-    current_firm: string | null;
-    pqe_today: number | null;
-    current_city: string | null;
-    practice_areas: string[] | null;
-    current_ctc: number | null;
-    expected_ctc: number | null;
-    notice_period_days: number | null;
-  } | null;
-  mandate: { title: string; city: string | null; client: string };
-  files: { id: string; file_name: string; mime_type: string | null; storage_path: string }[];
-};
+export { isPdfFile, type CoverSource };
 
 let serifFont: Promise<ArrayBuffer> | null = null;
 const serif = () =>
@@ -31,17 +14,11 @@ const serif = () =>
     return r.arrayBuffer();
   }));
 
-export const isPdfFile = (f: { file_name: string; mime_type: string | null } | undefined) =>
-  !!f && (f.mime_type === "application/pdf" || /\.pdf$/i.test(f.file_name));
-
-const safeName = (s: string) => s.replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
-
 export type CoverFile = { blob: Blob; fileName: string; joined: boolean; reason?: CoverResult["reason"] };
 
 export async function makeCoverFile(src: CoverSource, fileId: string, withMoney: boolean): Promise<CoverFile | { error: string }> {
-  const c = src.candidate;
-  if (!c?.full_name) return { error: "Couldn't load the candidate." };
-  const firm = src.firm || "Our firm";
+  const input = coverInput(src, withMoney);
+  if (!input) return { error: "Couldn't load the candidate." };
   const file = src.files.find((f) => f.id === fileId);
   const storage = createClient().storage;
 
@@ -54,40 +31,14 @@ export async function makeCoverFile(src: CoverSource, fileId: string, withMoney:
     ]);
     if (cv?.error) return { error: "Couldn't open the CV. Check the internet and try again." };
 
-    const facts = [
-      { label: "Experience", value: c.pqe_today != null ? `${formatPqe(c.pqe_today)} PQE` : "" },
-      { label: "Based in", value: c.current_city ?? "" },
-      ...(withMoney
-        ? [
-            { label: "Notice period", value: c.notice_period_days != null ? `${c.notice_period_days} days` : "" },
-            { label: "Current CTC", value: c.current_ctc != null ? formatLakhs(c.current_ctc) : "" },
-            { label: "Expected CTC", value: c.expected_ctc != null ? formatLakhs(c.expected_ctc) : "" },
-          ]
-        : []),
-    ];
-    const logoType = src.logoPath && /\.png$/i.test(src.logoPath) ? "png" : "jpg";
     const result = await buildCover(
-      {
-        firmName: firm,
-        logo: logo?.data ? { bytes: await logo.data.arrayBuffer(), type: logoType } : null,
-        name: c.full_name,
-        role: [c.designation, c.current_firm].filter(Boolean).join(", ") || null,
-        facts,
-        practiceAreas: c.practice_areas ?? [],
-        highlights: (src.highlights ?? "")
-          .split("\n")
-          .map((h) => h.replace(/^[-•*·]\s*/, "").trim())
-          .filter(Boolean),
-        sharedLine: `Shared in confidence with ${src.mandate.client} for ${src.mandate.title}${src.mandate.city ? `, ${src.mandate.city}` : ""}`,
-        byLine: [formatDate(new Date()), [src.sharer, firm].filter(Boolean).join(", ")].join(" · "),
-      },
+      { ...input, logo: logo?.data ? { bytes: await logo.data.arrayBuffer(), type: logoTypeOf(src.logoPath) } : null },
       font,
       file ? { bytes: cv?.data ? await cv.data.arrayBuffer() : new Uint8Array(), isPdf: isPdfFile(file) } : null,
     );
-    const name = safeName(c.full_name);
     return {
       blob: new Blob([result.bytes as BlobPart], { type: "application/pdf" }),
-      fileName: result.joined ? `${name} - ${safeName(firm)}.pdf` : `${name} - cover.pdf`,
+      fileName: coverFileName(input.name, src.firm, result.joined),
       joined: result.joined,
       reason: result.reason,
     };

@@ -494,6 +494,32 @@ ok((await one(`select count(*)::int as n from calendar_links where event_id = 'c
 const claimed = await q(`update calendar_sync_state set running_until = now() + interval '2 minutes' where id and running_until < now() returning id`);
 ok(claimed.length === 1, 'a teammate can take the sync lock when nobody holds it');
 ok((await q(`update calendar_sync_state set running_until = now() + interval '2 minutes' where id and running_until < now() returning id`)).length === 0, 'a second sync waits while the lock is held');
+// Sending a share from Gmail: only the person who logged it sends it, once; a failed send can go again.
+{
+  const cS = await id(`insert into candidates (full_name) values ('Mail Test Person')`);
+  const eS = await id(`insert into pipeline_entries (candidate_id, mandate_id, owner_id) values ($1, $2, $3)`, [cS, M, R2]);
+  const sS = await id(`insert into cv_shares (pipeline_entry_id, channels) values ($1, '{email}')`, [eS]);
+  const claim = async () => (await one(`select claim_share_email($1) as ok`, [sS])).ok;
+  const row = () => one(`select email_status, email_from, email_thread_id, email_error from cv_shares where id = $1`, [sS]);
+  ok((await row()).email_status === null, 'a logged share has no email until one is sent');
+  await as(R1);
+  ok((await claim()) === false, "nobody sends a share from Gmail for a teammate");
+  await as(R2);
+  ok((await claim()) === true && (await row()).email_status === 'sending', 'the sharer claims the send');
+  ok((await claim()) === false, 'a second click while it is sending does nothing');
+  await q(`select finish_share_email($1, 'two@example.in', null, null, 'Gmail refused the address')`, [sS]);
+  const failed = await row();
+  ok(failed.email_status === 'failed' && failed.email_error === 'Gmail refused the address', 'a failed send says why');
+  ok((await claim()) === true, 'a failed send can be tried again');
+  await q(`select finish_share_email($1, 'two@example.in', 'm1', 't1', null)`, [sS]);
+  const sent = await row();
+  ok(sent.email_status === 'sent' && sent.email_thread_id === 't1' && sent.email_error === null, 'a sent email keeps its Gmail thread for the replies later');
+  ok((await claim()) === false, 'a sent share is never sent twice');
+  await q(`select finish_share_email($1, 'two@example.in', null, null, 'late failure')`, [sS]);
+  ok((await row()).email_status === 'sent', 'a late outcome cannot overwrite a sent email');
+  await q(`update cv_shares set email_status = 'sending', emailed_at = now() - interval '5 minutes' where id = $1`, [sS]);
+  ok((await claim()) === true, 'a send stuck half-way for minutes can be tried again');
+}
 await as(OUT);
 ok((await one(`select count(*)::int as n from google_connections`)).n === 0, 'an outsider sees no Google connections');
 ok((await one(`select count(*)::int as n from calendar_links`)).n === 0 && (await one(`select count(*)::int as n from v_calendar_feed`)).n === 0, "an outsider sees nobody's calendar");

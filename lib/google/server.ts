@@ -22,9 +22,14 @@ export function googleConfig() {
  * like plain http; Google needs the exact https address registered in the firm's Google project.
  */
 export function publicOrigin(request: { headers: Headers; nextUrl: { host: string } }) {
-  const host = request.headers.get("x-forwarded-host")?.split(",")[0].trim() || request.headers.get("host") || request.nextUrl.host;
+  return originFromHeaders(request.headers, request.nextUrl.host);
+}
+
+/** The same, from a Server Action's headers(). */
+export function originFromHeaders(h: { get(name: string): string | null }, fallbackHost = "localhost") {
+  const host = h.get("x-forwarded-host")?.split(",")[0].trim() || h.get("host") || fallbackHost;
   const local = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host);
-  const proto = request.headers.get("x-forwarded-proto")?.split(",")[0].trim() || (local ? "http" : "https");
+  const proto = h.get("x-forwarded-proto")?.split(",")[0].trim() || (local ? "http" : "https");
   return `${local ? proto : "https"}://${host}`;
 }
 
@@ -65,24 +70,26 @@ const cache = new Map<string, { token: string; until: number }>();
  * A working access token for a teammate's Google account, or why not. Marks the connection broken
  * when Google refuses it (password changed, access removed), so Settings can ask them to reconnect.
  */
-export async function googleAccessToken(supabase: Db, memberId: string): Promise<{ token: string } | { error: string }> {
+export type TokenProblem = "not_set_up" | "not_connected" | "key_changed" | "refused" | "unreachable";
+
+export async function googleAccessToken(supabase: Db, memberId: string): Promise<{ token: string } | { error: string; code: TokenProblem }> {
   const c = googleConfig();
-  if (!c) return { error: "Google isn't set up for this workspace yet." };
+  if (!c) return { error: "Google isn't set up for this workspace yet.", code: "not_set_up" };
   const hit = cache.get(memberId);
   if (hit && hit.until > Date.now()) return { token: hit.token };
 
   const { data: row } = await supabase.from("google_connections").select("status, refresh_token_enc").eq("member_id", memberId).maybeSingle();
-  if (!row || row.status !== "connected" || !row.refresh_token_enc) return { error: "Their Google account isn't connected." };
+  if (!row || row.status !== "connected" || !row.refresh_token_enc) return { error: "Their Google account isn't connected.", code: "not_connected" };
   const refresh = openToken(row.refresh_token_enc, c.tokenKey);
-  if (!refresh) return { error: "Their Google connection needs to be made again (the server key changed)." };
+  if (!refresh) return { error: "Their Google connection needs to be made again (the server key changed).", code: "key_changed" };
 
   const r = await tokenCall({ refresh_token: refresh, client_id: c.clientId, client_secret: c.clientSecret, grant_type: "refresh_token" });
   if (!r.access_token) {
     if (r.error === "invalid_grant") {
       await supabase.from("google_connections").update({ status: "broken", last_error: "Google stopped accepting this connection. Connect again." }).eq("member_id", memberId);
-      return { error: "Google stopped accepting their connection. They need to connect again in Settings." };
+      return { error: "Google stopped accepting their connection. They need to connect again in Settings.", code: "refused" };
     }
-    return { error: "Couldn't reach Google. Try again in a minute." };
+    return { error: "Couldn't reach Google. Try again in a minute.", code: "unreachable" };
   }
   cache.set(memberId, { token: r.access_token, until: Date.now() + Math.max(60, (r.expires_in ?? 3600) - 60) * 1000 });
   return { token: r.access_token };

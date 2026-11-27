@@ -1,6 +1,6 @@
 // The one-page cover put in front of a CV when it's shared: the firm's logo and name, who the
-// candidate is and what stands out. Built in the browser with pdf-lib, so the CV never leaves the
-// computer. No phone or email on it: those stay on the CV itself.
+// candidate is and what stands out. Drawn with pdf-lib, in the browser (Download, Preview) or on the
+// server (sending from Gmail). No phone or email on it: those stay on the CV itself.
 // No app imports, so tests/cover.test.mjs can build one straight from Node.
 
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";

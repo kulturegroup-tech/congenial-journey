@@ -2,7 +2,10 @@
 
 import { refreshAll } from "@/lib/refresh";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { googleConfig, originFromHeaders } from "@/lib/google/server";
+import { sendShareEmail, shareEmailProblem, type ShareEmail, type ShareEmailResult } from "@/lib/share-email";
 import { all, dbError, moneyProblem, monthlyToAnnual, num, text, type ActionState } from "@/lib/forms";
 import type { Database } from "@/lib/database.types";
 
@@ -195,6 +198,8 @@ export async function shareContext(entryId: string) {
     supabase.from("candidates").select("highlights").eq("id", e.candidate_id).maybeSingle(),
     userId ? supabase.from("team_members").select("full_name").eq("id", userId).maybeSingle() : null,
   ]);
+  // Whether this person can send the share straight from their own Gmail.
+  const { data: google } = userId ? await supabase.from("google_connections").select("google_email, status").eq("member_id", userId).maybeSingle() : { data: null };
   return {
     firm: settings.data?.firm_name ?? null,
     logoPath: settings.data?.logo_path ?? null,
@@ -207,16 +212,44 @@ export async function shareContext(entryId: string) {
     contacts: contacts.data ?? [],
     mandateContacts: e.mandates.contact_ids ?? [],
     agreement: agreement.data,
+    gmail: {
+      ready: !!googleConfig(),
+      email: google?.status === "connected" ? google.google_email : null,
+      broken: google?.status === "broken",
+    },
   };
 }
 
-export type ShareState = { ok?: boolean; error?: string; blocked?: Finding[]; shareId?: string; validUntil?: string } | null;
+export type ShareState = { ok?: boolean; error?: string; blocked?: Finding[]; shareId?: string; validUntil?: string; email?: ShareEmailResult } | null;
 
-/** Log a CV share. The database re-runs the duplicate check and refuses without an override reason. */
+const shareEmailFrom = (fd: FormData): ShareEmail => ({
+  to: text(fd, "to_email") ?? "",
+  cc: text(fd, "cc_email") ?? "",
+  subject: text(fd, "subject") ?? "",
+  note: String(fd.get("note") ?? ""),
+  cover: fd.get("cover") === "on",
+  withMoney: fd.get("with_money") === "on",
+});
+
+const actionOrigin = async () => originFromHeaders(await headers());
+
+/**
+ * Log a CV share. The database re-runs the duplicate check and refuses without an override reason.
+ * With "Send from my Gmail" ticked, the email then goes from the sharer's own Gmail with the CV attached.
+ */
 export async function shareCv(_: ShareState, fd: FormData): Promise<ShareState> {
   const { supabase, userId } = await me();
   const channels = all(fd, "channels") as Channel[];
   if (!channels.length) return { error: "Pick at least one channel." };
+  const viaGmail = fd.get("send_gmail") === "on";
+  const mail = shareEmailFrom(fd);
+  if (viaGmail) {
+    // Checked before logging, so a typo in an address doesn't leave a share logged but unsent.
+    if (!channels.includes("email")) return { error: "Tick Email to send it from Gmail." };
+    if (!text(fd, "cv_file_id")) return { error: "There's no CV to attach. Upload it on their profile first, or untick “Send from my Gmail”." };
+    const problem = shareEmailProblem(mail);
+    if (problem) return { error: problem };
+  }
   const { data, error } = await supabase
     .from("cv_shares")
     .insert({
@@ -245,7 +278,18 @@ export async function shareCv(_: ShareState, fd: FormData): Promise<ShareState> 
     return { error: dbError(error) };
   }
   refreshAll();
-  return { ok: true, shareId: data.id, validUntil: data.valid_until };
+  if (!viaGmail) return { ok: true, shareId: data.id, validUntil: data.valid_until };
+  const email = await sendShareEmail(supabase, userId!, data.id, mail, await actionOrigin());
+  return { ok: true, shareId: data.id, validUntil: data.valid_until, email };
+}
+
+/** "Try again" after a Gmail send that didn't go. The share is already logged. */
+export async function resendShareEmail(shareId: string, mail: ShareEmail): Promise<ShareEmailResult> {
+  const { supabase, userId } = await me();
+  if (!userId) return { sent: false, error: "Sign in again, then try." };
+  const r = await sendShareEmail(supabase, userId, shareId, mail, await actionOrigin());
+  refreshAll();
+  return r;
 }
 
 /** Offer accepted (or already joined): the fee % and replacement window come from the agreement. */

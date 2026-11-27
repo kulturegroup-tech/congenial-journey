@@ -692,6 +692,12 @@ export type Database = {
           created_at: string
           cv_file_id: string | null
           duplicate_findings: Json
+          email_error: string | null
+          email_from: string | null
+          email_message_id: string | null
+          email_status: string | null
+          email_thread_id: string | null
+          emailed_at: string | null
           id: string
           mandate_id: string
           override_reason: string | null
@@ -708,6 +714,12 @@ export type Database = {
           created_at?: string
           cv_file_id?: string | null
           duplicate_findings?: Json
+          email_error?: string | null
+          email_from?: string | null
+          email_message_id?: string | null
+          email_status?: string | null
+          email_thread_id?: string | null
+          emailed_at?: string | null
           id?: string
           mandate_id: string
           override_reason?: string | null
@@ -724,6 +736,12 @@ export type Database = {
           created_at?: string
           cv_file_id?: string | null
           duplicate_findings?: Json
+          email_error?: string | null
+          email_from?: string | null
+          email_message_id?: string | null
+          email_status?: string | null
+          email_thread_id?: string | null
+          emailed_at?: string | null
           id?: string
           mandate_id?: string
           override_reason?: string | null
@@ -2111,6 +2129,10 @@ export type Database = {
         }
         Returns: string
       }
+      claim_share_email: {
+        Args: { p_share: string }
+        Returns: boolean
+      }
       check_duplicate: {
         Args: {
           p_candidate: string
@@ -2123,6 +2145,16 @@ export type Database = {
           rule: string
           seen_on: string
         }[]
+      }
+      finish_share_email: {
+        Args: {
+          p_error: string | null
+          p_from: string | null
+          p_message_id: string | null
+          p_share: string
+          p_thread_id: string | null
+        }
+        Returns: undefined
       }
       financial_year: { Args: { p_date: string }; Returns: string }
       undo_pipeline_adds: { Args: { p_ids: string[] }; Returns: number }

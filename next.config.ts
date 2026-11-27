@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
   // page load also rendered every other screen in the sidebar on the server, which on the free
   // plan's small CPU slowed down the screen you actually asked for.
   partialPrefetching: false,
+  // Sending a share from Gmail draws the cover page on the server, which reads this font from disk.
+  outputFileTracingIncludes: { "/**": ["./public/fonts/InstrumentSerif-Regular.ttf"] },
   // "/" is just a way into Today: send people there before any server work happens.
   async redirects() {
     return [{ source: "/", destination: "/today", permanent: false }];
