@@ -11,6 +11,7 @@ import { useToast } from "@/components/toast";
 import { Avatar, Badge } from "@/components/ui";
 import { DATED_STAGES, PHASES, STAGES, stageLabel } from "@/lib/constants";
 import { formatDate, formatDateTime, formatPqe } from "@/lib/format";
+import { VERDICT_SAID, verdictTone } from "@/lib/portal-labels";
 import type { ActionState } from "@/lib/forms";
 import { exitEntry, moveStage, recordPlacement, reopenEntry, setInterviewAt } from "../actions";
 import { ShareDialog } from "./share-dialog";
@@ -41,6 +42,8 @@ export type Entry = {
   owner: string;
   has_share: boolean;
   placement: string | null;
+  /** The latest answer from the client portal, if any. */
+  client_said: { verdict: string; note: string | null; by: string; at: string } | null;
 };
 
 const order = STAGES.map((s) => s.value as string);
@@ -308,6 +311,11 @@ function Card({
             <span className={e.days_in_stage >= 7 ? "font-medium text-warn" : ""}>{e.days_in_stage ? `${e.days_in_stage}d here` : "New today"}</span>
             {e.interview_at ? <span className="rounded-full bg-lilac px-2 py-0.5 text-lilac-ink">{formatDateTime(e.interview_at)}</span> : null}
             {e.placement ? <Badge tone={e.placement === "joined" ? "ok" : "accent"}>{e.placement.replace(/_/g, " ")}</Badge> : null}
+            {e.client_said ? (
+              <span title={`${e.client_said.by}, ${formatDate(e.client_said.at)}${e.client_said.note ? `: ${e.client_said.note}` : ""}`}>
+                <Badge tone={verdictTone(e.client_said.verdict)}>Client: {VERDICT_SAID[e.client_said.verdict] ?? e.client_said.verdict}</Badge>
+              </span>
+            ) : null}
           </span>
           <span className="swap-in flex items-center gap-0.5">
             {e.stage !== "joined" ? (

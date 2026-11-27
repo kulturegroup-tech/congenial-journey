@@ -1627,6 +1627,86 @@ export type Database = {
           },
         ]
       }
+      portal_access: {
+        Row: {
+          client_id: string
+          code_hash: string
+          code_set_at: string
+          contact_id: string
+          created_at: string
+          created_by: string | null
+          failed_tries: number
+          id: string
+          last_seen_at: string | null
+          link_token: string
+          locked_until: string | null
+          turned_off_at: string | null
+        }
+        Insert: {
+          client_id: string
+          code_hash: string
+          code_set_at?: string
+          contact_id: string
+          created_at?: string
+          created_by?: string | null
+          failed_tries?: number
+          id?: string
+          last_seen_at?: string | null
+          link_token: string
+          locked_until?: string | null
+          turned_off_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          code_hash?: string
+          code_set_at?: string
+          contact_id?: string
+          created_at?: string
+          created_by?: string | null
+          failed_tries?: number
+          id?: string
+          last_seen_at?: string | null
+          link_token?: string
+          locked_until?: string | null
+          turned_off_at?: string | null
+        }
+        Relationships: []
+      }
+      portal_feedback: {
+        Row: {
+          contact_id: string
+          created_at: string
+          cv_share_id: string
+          id: string
+          note: string | null
+          verdict: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          cv_share_id: string
+          id?: string
+          note?: string | null
+          verdict: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          cv_share_id?: string
+          id?: string
+          note?: string | null
+          verdict?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_feedback_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "client_contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       practice_areas: {
         Row: {
           active: boolean
@@ -2274,6 +2354,34 @@ export type Database = {
       pqe_years: {
         Args: { as_of?: string; practice_start: string }
         Returns: number
+      }
+      portal_give_feedback: {
+        Args: { p_link: string; p_note: string; p_share: string; p_token: string; p_verdict: string }
+        Returns: Json
+      }
+      portal_new_code: {
+        Args: { p_contact: string; p_new_link?: boolean }
+        Returns: { link_token: string; code: string }[]
+      }
+      portal_sign_in: {
+        Args: { p_code: string; p_link: string }
+        Returns: Json
+      }
+      portal_sign_out: {
+        Args: { p_token: string }
+        Returns: undefined
+      }
+      portal_turn_off: {
+        Args: { p_contact: string }
+        Returns: undefined
+      }
+      portal_turn_on: {
+        Args: { p_contact: string }
+        Returns: undefined
+      }
+      portal_view: {
+        Args: { p_link: string; p_token: string }
+        Returns: Json
       }
       resolve_firm: {
         Args: { p_create?: boolean; p_name: string }

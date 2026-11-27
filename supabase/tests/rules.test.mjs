@@ -527,7 +527,96 @@ ok((await one(`select count(*)::int as n from storage.objects where bucket_id = 
 ok((await one(`select count(*)::int as n from cv_inbox`)).n === 0, 'an outsider sees no inbox CVs');
 ok((await one(`select count(*)::int as n from candidates`)).n === 0, 'signed-in outsider sees nothing');
 ok((await one(`select count(*)::int as n from settings`)).n === 0, 'outsider cannot read settings');
+ok((await one(`select count(*)::int as n from portal_access`)).n === 0 && (await one(`select count(*)::int as n from portal_feedback`)).n === 0, 'an outsider sees no portal access or client feedback');
 await db.exec(`reset role`);
+
+console.log('\nClient portal');
+{
+  await as(R1);
+  const pf = await id(`insert into firms (name) values ('Portal Test LLP')`);
+  const pc = await id(`insert into clients (firm_id, display_name) values ($1, 'Portal Test')`, [pf]);
+  const pA = await id(`insert into client_contacts (client_id, name, role) values ($1, 'Anika Partner', 'partner')`, [pc]);
+  const pB = await id(`insert into client_contacts (client_id, name, role) values ($1, 'Bharat Partner', 'partner')`, [pc]);
+  const mA = await id(`insert into mandates (client_id, title, owner_id, contact_ids) values ($1, 'Portal role A', $2, $3)`, [pc, R2, [pA]]);
+  const mB = await id(`insert into mandates (client_id, title, owner_id, contact_ids) values ($1, 'Portal role B', $2, $3)`, [pc, R2, [pB]]);
+  const pcand = await id(`insert into candidates (full_name, designation, current_city, current_ctc, practice_areas) values ('Portal Person', 'Associate', 'Mumbai', 2400000, '{"Banking & Finance"}')`);
+  await q(`insert into candidate_phones (candidate_id, phone) values ($1, '+919000000777')`, [pcand]);
+  const eA = await id(`insert into pipeline_entries (candidate_id, mandate_id, owner_id) values ($1, $2, $3)`, [pcand, mA, R2]);
+  const eB = await id(`insert into pipeline_entries (candidate_id, mandate_id, owner_id) values ($1, $2, $3)`, [pcand, mB, R2]);
+  const sA = await id(`insert into cv_shares (pipeline_entry_id, channels) values ($1, '{email}')`, [eA]);
+  const sB = await id(`insert into cv_shares (pipeline_entry_id, channels, override_reason) values ($1, '{email}', 'other: test')`, [eB]);
+
+  await db.exec(`set role authenticated`);
+  await as(R2);
+  await fails(`select * from portal_new_code('${pA}')`, /Only an admin/, 'only an admin gives a client the portal');
+  await as(R1);
+  const first = await one(`select * from portal_new_code($1)`, [pA]);
+  ok(/^[0-9a-f]{64}$/.test(first.link_token) && /^[0-9]{6}$/.test(first.code), 'giving access makes a long private link and a 6-digit code');
+  ok((await one(`select code_hash from portal_access where contact_id = $1`, [pA])).code_hash !== first.code, 'the code itself is never stored');
+
+  const anon = async () => { await db.exec(`set role anon`); await as(''); };
+  const team = async (who) => { await db.exec(`set role authenticated`); await as(who); };
+  const signIn = async (link, code) => (await one(`select portal_sign_in($1, $2) as r`, [link, code])).r;
+  const view = async (link, token) => (await one(`select portal_view($1, $2) as v`, [link, token])).v;
+  const wrong = first.code === '000000' ? '111111' : '000000';
+
+  await anon();
+  ok((await one(`select count(*)::int as n from portal_access`)).n === 0 && (await one(`select count(*)::int as n from portal_sessions`)).n === 0, 'a visitor reads no portal tables directly');
+  ok((await one(`select count(*)::int as n from cv_shares`)).n === 0 && (await one(`select count(*)::int as n from candidates`)).n === 0, 'a visitor reads no candidates or shares');
+  await fails(`select * from portal_new_code('${pA}')`, /permission denied/, 'a visitor cannot make codes');
+  await fails(`select portal_session_access('${first.link_token}', 'x')`, /permission denied/, 'a visitor cannot call the inside helpers');
+  ok((await signIn('nope', first.code)).error === 'link', 'a wrong link gets nowhere');
+  ok((await signIn(first.link_token, wrong)).tries_left === 4, 'a wrong code says how many tries are left');
+  for (let i = 0; i < 3; i++) await signIn(first.link_token, wrong);
+  ok((await signIn(first.link_token, wrong)).error === 'locked', 'five wrong codes lock the link');
+  ok((await signIn(first.link_token, first.code)).error === 'locked', 'even the right code waits while it is locked');
+  await team(R1);
+  await q(`select portal_turn_on($1)`, [pA]);
+  await anon();
+  const s1 = await signIn(first.link_token, first.code);
+  ok(/^[0-9a-f]{64}$/.test(s1.token), 'the right code signs in');
+  ok((await view(first.link_token, 'not-a-token')) === null && (await view('nope', s1.token)) === null, 'no page without both the link and a session');
+  const v = await view(first.link_token, s1.token);
+  ok(v.contact === 'Anika Partner' && v.client === 'Portal Test' && v.firm, 'the page knows who it is for');
+  ok(v.shares.length === 1 && v.shares[0].id === sA && v.shares[0].mandate === 'Portal role A', 'a contact sees only CVs for the roles they are on');
+  const shown = JSON.stringify(v);
+  ok(!/current_ctc|2400000|\+919000000777|phones|emails|notes/.test(shown), 'no pay, phone, email or notes ever reach the portal');
+  ok(v.shares[0].status === 'with_you' && v.shares[0].practice_areas[0] === 'Banking & Finance', 'it shows where the CV stands and the practice');
+  ok((await one(`select portal_give_feedback($1, $2, $3, 'maybe', null) as r`, [first.link_token, s1.token, sA])).r.error === 'verdict', 'only the four answers are accepted');
+  ok((await one(`select portal_give_feedback($1, $2, $3, 'shortlist', null) as r`, [first.link_token, s1.token, sB])).r.error === 'share', "no feedback on a CV they can't see");
+  ok((await one(`select portal_give_feedback($1, $2, $3, 'shortlist', 'Strong banking work') as r`, [first.link_token, s1.token, sA])).r.ok === true, 'a contact shortlists a CV with a note');
+  ok((await view(first.link_token, s1.token)).shares[0].feedback.verdict === 'shortlist', 'their answer shows on the page');
+
+  await team(R2);
+  const note = await one(`select title, body, mandate_id from notifications where kind = 'client_feedback' and candidate_id = $1`, [pcand]);
+  ok(note && /Anika Partner \(Portal Test\): shortlisted for Portal Person/.test(note.title) && note.body === 'Strong banking work' && note.mandate_id === mA, "the candidate's owner hears about it");
+  ok((await one(`select count(*)::int as n from portal_feedback where cv_share_id = $1`, [sA])).n === 1, 'the team sees client feedback');
+  ok((await one(`select count(*)::int as n from portal_sessions`)).n === 0, 'nobody on the team reads session tokens');
+
+  await team(R1);
+  await q(`select portal_turn_off($1)`, [pA]);
+  await anon();
+  ok((await view(first.link_token, s1.token)) === null && (await signIn(first.link_token, first.code)).error === 'link', 'turning it off signs them out and the link stops working');
+  await team(R1);
+  await q(`select portal_turn_on($1)`, [pA]);
+  await anon();
+  const s2 = await signIn(first.link_token, first.code);
+  ok(!!s2.token, 'turning it back on (Undo) lets the same link and code in');
+  await team(R1);
+  const second = await one(`select * from portal_new_code($1)`, [pA]);
+  await anon();
+  ok(second.link_token === first.link_token && (await view(first.link_token, s2.token)) === null, 'a new code keeps the link but signs everyone out');
+  await team(R1);
+  const third = await one(`select * from portal_new_code($1, true)`, [pA]);
+  await anon();
+  ok(third.link_token !== first.link_token && (await signIn(first.link_token, third.code)).error === 'link', 'a new link retires the old one');
+  ok(!!(await signIn(third.link_token, third.code)).token, 'and the new link works with the new code');
+  const s3 = (await signIn(third.link_token, third.code)).token;
+  await q(`select portal_sign_out($1)`, [s3]);
+  ok((await view(third.link_token, s3)) === null, 'signing out ends the session');
+  await db.exec(`reset role`);
+  await as(R1);
+}
 
 
 console.log('\nSafe updates');

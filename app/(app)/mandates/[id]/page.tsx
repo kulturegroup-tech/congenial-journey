@@ -56,19 +56,30 @@ async function MandateScreen({ params }: { params: Params }) {
   const b = bq.data;
 
   const candIds = [...new Set((eq.data ?? []).map((e) => e.candidate_id))];
-  const [{ data: cands }, { data: pocRows }] = await Promise.all([
+  const shareIds = (sq.data ?? []).map((s) => s.id);
+  const [{ data: cands }, { data: pocRows }, { data: said }] = await Promise.all([
     candIds.length
       ? supabase.from("v_candidates").select("id, full_name, current_firm, pqe_today").in("id", candIds)
       : Promise.resolve({ data: [] as { id: string | null; full_name: string | null; current_firm: string | null; pqe_today: number | null }[] }),
     m.contact_ids.length
       ? supabase.from("client_contacts").select("id, name, role, email, phone").in("id", m.contact_ids)
       : Promise.resolve({ data: [] as { id: string; name: string; role: string; email: string | null; phone: string | null }[] }),
+    // What the client said in the portal, newest first.
+    shareIds.length
+      ? supabase.from("portal_feedback").select("cv_share_id, verdict, note, created_at, client_contacts(name)").in("cv_share_id", shareIds).order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] as { cv_share_id: string; verdict: string; note: string | null; created_at: string; client_contacts: { name: string } | null }[] }),
   ]);
   // The client's contacts for this role, in the order they were picked (the first is the main one).
   const pocs = m.contact_ids.map((cid) => (pocRows ?? []).find((p) => p.id === cid)).filter((p) => p != null);
   const byId = new Map((cands ?? []).map((c) => [c.id, c]));
   const shared = new Set((sq.data ?? []).map((s) => s.pipeline_entry_id));
   const placed = new Map((pq.data ?? []).map((p) => [p.pipeline_entry_id, p.status]));
+  const entryOfShare = new Map((sq.data ?? []).map((s) => [s.id, s.pipeline_entry_id]));
+  const clientSaid = new Map<string, Entry["client_said"]>();
+  for (const f of said ?? []) {
+    const entry = entryOfShare.get(f.cv_share_id);
+    if (entry && !clientSaid.has(entry)) clientSaid.set(entry, { verdict: f.verdict, note: f.note, by: f.client_contacts?.name ?? "The client", at: f.created_at });
+  }
 
   const entries: Entry[] = (eq.data ?? []).map((e) => {
     const c = byId.get(e.candidate_id);
@@ -89,6 +100,7 @@ async function MandateScreen({ params }: { params: Params }) {
       owner: e.owner_id ? team[e.owner_id] ?? "" : "",
       has_share: shared.has(e.id),
       placement: placed.get(e.id) ?? null,
+      client_said: clientSaid.get(e.id) ?? null,
     };
   });
 

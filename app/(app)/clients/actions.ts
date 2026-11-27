@@ -154,3 +154,36 @@ export async function agreementLink(agreementId: string) {
   if (error || !data) return { error: error?.message ?? "Couldn't open the file." };
   return { url: data.signedUrl };
 }
+
+// ---------------------------------------------------------------- client portal (admins)
+
+export type PortalCode = { link: string; code: string } | { error: string };
+
+/**
+ * Turns the portal on for a contact, or makes them a new code (the link stays unless newLink).
+ * The code comes back once, to show the admin; only its hash is kept. Open sessions end.
+ */
+export async function portalNewCode(contactId: string, newLink = false): Promise<PortalCode> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("portal_new_code", { p_contact: contactId, p_new_link: newLink });
+  const row = data?.[0];
+  if (error || !row) return { error: error?.message.includes("Only an admin") ? "Only an admin can give clients the portal." : dbError(error) };
+  refreshAll();
+  return { link: row.link_token, code: row.code };
+}
+
+export async function portalTurnOff(contactId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("portal_turn_off", { p_contact: contactId });
+  if (error) return { error: error.message.includes("Only an admin") ? "Only an admin can turn the portal off." : dbError(error) };
+  refreshAll();
+  return { ok: true };
+}
+
+export async function portalTurnOn(contactId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("portal_turn_on", { p_contact: contactId });
+  if (error) return { error: error.message.includes("Only an admin") ? "Only an admin can turn the portal on." : dbError(error) };
+  refreshAll();
+  return { ok: true };
+}

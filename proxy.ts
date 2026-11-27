@@ -37,7 +37,8 @@ export async function proxy(request: NextRequest) {
   const signedIn = Boolean(data?.claims?.sub);
   const path = request.nextUrl.pathname;
   // /warm is the keep-awake ping (app/warm/page.tsx): no session, and it shows nothing.
-  const isPublic = path === "/login" || path === "/warm" || path.startsWith("/auth/");
+  // /portal/ is the client portal: clients have no team session; the portal checks its own code.
+  const isPublic = path === "/login" || path === "/warm" || path.startsWith("/auth/") || path.startsWith("/portal/");
 
   const redirectTo = (target: URL) => {
     const redirect = NextResponse.redirect(target);

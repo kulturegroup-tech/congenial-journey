@@ -6,10 +6,10 @@ import { Suspense } from "react";
 import { ButtonLink } from "@/components/form";
 import { Badge, Card, Empty, Page, PageHeader, Table, TableSkeleton } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
-import { getTeamNames } from "@/lib/auth/member";
+import { getSession, getTeamNames } from "@/lib/auth/member";
 import { ago, formatDate, formatPqeRange } from "@/lib/format";
 import { CONTACT_ROLE } from "@/lib/constants";
-import { AgreementDialog, AgreementFile, ContactDialog, RemoveContact, type Agreement } from "./widgets";
+import { AgreementDialog, AgreementFile, ContactDialog, PortalAccess, RemoveContact, type Agreement, type PortalRow } from "./widgets";
 
 export const metadata: Metadata = { title: "Client" };
 
@@ -37,6 +37,13 @@ async function ClientScreen({ params }: { params: Params }) {
     supabase.from("settings").select("home_state_code").maybeSingle(),
     supabase.from("mandates").select("id, title, contact_ids").eq("client_id", id).in("status", ["active", "on_hold"]),
   ]);
+  // Client portal: who has it, and whether this person may hand it out (admins only).
+  const [{ data: portal }, session] = await Promise.all([
+    supabase.from("portal_access").select("contact_id, link_token, turned_off_at, last_seen_at, code_set_at, locked_until").eq("client_id", id),
+    getSession(),
+  ]);
+  const portalOf = (contactId: string): PortalRow | null => (portal ?? []).find((a) => a.contact_id === contactId) ?? null;
+  const isAdmin = session.state === "member" && session.member.is_admin;
   // Which open mandates each contact is on.
   const rolesOf = (contactId: string) => (roles.data ?? []).filter((r) => r.contact_ids.includes(contactId));
   const c = cq.data;
@@ -249,6 +256,7 @@ async function ClientScreen({ params }: { params: Params }) {
                         </span>
                       ) : null}
                       {p.copy_on_shares ? <Badge tone="accent">Copied on CV shares</Badge> : null}
+                      <PortalAccess contact={{ id: p.id, name: p.name }} access={portalOf(p.id)} isAdmin={isAdmin} onRoles={rolesOf(p.id).length} />
                     </li>
                   ))}
                 </ul>
