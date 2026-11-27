@@ -130,3 +130,15 @@ export async function disconnectGoogle() {
   refreshAll();
   return { ok: true };
 }
+
+/** Whether Covaro puts the signed-in person's calls, interviews, follow-ups and joinings on their Google Calendar. */
+export async function setCalendarSync(on: boolean) {
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  const uid = claims?.claims?.sub;
+  if (!uid) return { error: "You're signed out." };
+  const { error } = await supabase.from("google_connections").update({ calendar_sync: on }).eq("member_id", uid);
+  if (error) return { error: dbError(error) };
+  refreshAll();
+  return { ok: true };
+}

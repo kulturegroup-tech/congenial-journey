@@ -419,6 +419,22 @@ ok((await one(`select monthly_joining_target from settings`)).monthly_joining_ta
 await q(`update pipeline_entries set interview_at = now() + interval '2 days' where id = $1`, [u2]);
 ok((await one(`select interview_at is not null as x from pipeline_entries where id = $1`, [u2])).x, 'interview date stored on the entry');
 
+console.log('\nCalendar feed (Covaro → Google Calendar)');
+{
+  const call = await one(`select member_id from v_calendar_feed where kind = 'call' and candidate_id = $1`, [F]);
+  ok(call && call.member_id, "a booked call goes on the recruiter's calendar");
+  await q(`insert into screening_calls (candidate_id, status, scheduled_for) values ($1, 'scheduled', now() + interval '200 days')`, [F]);
+  ok((await one(`select count(*)::int as n from v_calendar_feed where kind = 'call' and candidate_id = $1`, [F])).n === 1, 'a call more than 120 days away waits its turn');
+  await q(`update pipeline_entries set interview_at = now() + interval '2 days', owner_id = $2 where id = $1`, [eA, R1]);
+  ok((await one(`select member_id from v_calendar_feed where kind = 'interview' and item_id = $1`, [eA])).member_id === R1, "an interview goes on the pipeline owner's calendar");
+  await q(`update pipeline_entries set interview_at = null where id = $1`, [eA]);
+  ok(!(await one(`select 1 as x from v_calendar_feed where kind = 'interview' and item_id = $1`, [eA])), 'no interview date, no interview event');
+  const eT = await id(`insert into pipeline_entries (candidate_id, mandate_id, owner_id, exit_reason, exited_at, follow_up_on) values ($1, $2, $3, 'asked_for_time', now(), today_ist() + 3)`, [F, M, R1]);
+  ok((await one(`select on_date::text as d, member_id from v_calendar_feed where kind = 'follow_up' and item_id = $1`, [eT])).member_id === R1, 'an "asked for time" follow-up goes on the owner\'s calendar as an all-day event');
+  ok((await one(`select count(*)::int as n from v_calendar_feed where kind = 'joining'`)).n >= 1, "a joining goes on the candidate's owner's calendar");
+  ok((await one(`select count(*)::int as n from calendar_sync_state`)).n === 1, 'one shared sync lock');
+}
+
 console.log('\nRow-level security');
 await db.exec(`set role authenticated`);
 await as(R2);
@@ -469,8 +485,18 @@ ok((await one(`select count(*)::int as n from google_connections`)).n === 1, 'Go
 await as(R2);
 await q(`update google_connections set status = 'disconnected', refresh_token_enc = null where member_id = $1`, [R2]);
 ok((await one(`select status from google_connections where member_id = $1`, [R2])).status === 'disconnected', 'a person can unlink their own Google account');
+// What Covaro put on calendars: any teammate's sync may record it; nobody deletes the record.
+await q(`insert into calendar_links (kind, item_id, member_id, event_id, hash, starts_on) values ('call', gen_random_uuid(), $1, 'cvctest', 'h1', today_ist())`, [R2]);
+await q(`update calendar_links set removed = true where event_id = 'cvctest'`);
+ok((await one(`select removed from calendar_links where event_id = 'cvctest'`)).removed === true, 'a teammate can record that an event came off a calendar');
+await q(`delete from calendar_links where event_id = 'cvctest'`);
+ok((await one(`select count(*)::int as n from calendar_links where event_id = 'cvctest'`)).n === 1, 'calendar records are never deleted');
+const claimed = await q(`update calendar_sync_state set running_until = now() + interval '2 minutes' where id and running_until < now() returning id`);
+ok(claimed.length === 1, 'a teammate can take the sync lock when nobody holds it');
+ok((await q(`update calendar_sync_state set running_until = now() + interval '2 minutes' where id and running_until < now() returning id`)).length === 0, 'a second sync waits while the lock is held');
 await as(OUT);
 ok((await one(`select count(*)::int as n from google_connections`)).n === 0, 'an outsider sees no Google connections');
+ok((await one(`select count(*)::int as n from calendar_links`)).n === 0 && (await one(`select count(*)::int as n from v_calendar_feed`)).n === 0, "an outsider sees nobody's calendar");
 ok((await one(`select count(*)::int as n from storage.objects where bucket_id = 'branding'`)).n === 0, 'an outsider sees no logo');
 ok((await one(`select count(*)::int as n from cv_inbox`)).n === 0, 'an outsider sees no inbox CVs');
 ok((await one(`select count(*)::int as n from candidates`)).n === 0, 'signed-in outsider sees nothing');

@@ -199,6 +199,60 @@ export type Database = {
           },
         ]
       }
+      calendar_links: {
+        Row: {
+          event_id: string
+          hash: string
+          item_id: string
+          kind: string
+          member_id: string
+          removed: boolean
+          starts_on: string
+          updated_at: string
+        }
+        Insert: {
+          event_id: string
+          hash: string
+          item_id: string
+          kind: string
+          member_id: string
+          removed?: boolean
+          starts_on: string
+          updated_at?: string
+        }
+        Update: {
+          event_id?: string
+          hash?: string
+          item_id?: string
+          kind?: string
+          member_id?: string
+          removed?: boolean
+          starts_on?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      calendar_sync_state: {
+        Row: {
+          id: boolean
+          last_error: string | null
+          last_run_at: string | null
+          running_until: string
+        }
+        Insert: {
+          id?: boolean
+          last_error?: string | null
+          last_run_at?: string | null
+          running_until?: string
+        }
+        Update: {
+          id?: boolean
+          last_error?: string | null
+          last_run_at?: string | null
+          running_until?: string
+        }
+        Relationships: []
+      }
       candidate_emails: {
         Row: {
           candidate_id: string
@@ -823,6 +877,7 @@ export type Database = {
       }
       google_connections: {
         Row: {
+          calendar_sync: boolean
           connected_at: string
           google_email: string
           last_error: string | null
@@ -833,6 +888,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          calendar_sync?: boolean
           connected_at?: string
           google_email: string
           last_error?: string | null
@@ -843,6 +899,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          calendar_sync?: boolean
           connected_at?: string
           google_email?: string
           last_error?: string | null
@@ -1850,6 +1907,22 @@ export type Database = {
       }
     }
     Views: {
+      v_calendar_feed: {
+        Row: {
+          candidate_id: string | null
+          candidate_name: string | null
+          client_name: string | null
+          item_id: string | null
+          kind: string | null
+          mandate_title: string | null
+          member_id: string | null
+          on_date: string | null
+          phone: string | null
+          stage: string | null
+          starts_at: string | null
+        }
+        Relationships: []
+      }
       v_candidates: {
         Row: {
           created_at: string | null

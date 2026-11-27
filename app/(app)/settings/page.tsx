@@ -30,12 +30,13 @@ export default function SettingsPage() {
 
 async function SettingsBody() {
   const supabase = await createClient();
-  const [session, team, settings, practices, google] = await Promise.all([
+  const [session, team, settings, practices, google, syncState] = await Promise.all([
     getSession(),
     supabase.from("team_members").select("id, full_name, email, is_admin, active").order("active", { ascending: false }).order("full_name"),
     supabase.from("settings").select("*").single(),
     supabase.from("practice_areas").select("name").eq("active", true).order("sort"),
-    supabase.from("google_connections").select("member_id, google_email, status, connected_at"),
+    supabase.from("google_connections").select("member_id, google_email, status, connected_at, calendar_sync"),
+    supabase.from("calendar_sync_state").select("last_run_at, last_error").eq("id", true).maybeSingle(),
   ]);
   const me = session.state === "member" ? session.member : null;
   const isAdmin = !!me?.is_admin;
@@ -107,7 +108,7 @@ async function SettingsBody() {
             Connect your work Google account so Covaro can send CV shares from your Gmail, show the emails with a candidate or client, and keep calls and
             interviews in step with your Google Calendar. Emails are read live from Gmail when you look; Covaro doesn&apos;t keep copies.
           </p>
-          <GoogleConnect ready={!!googleConfig()} mine={myGoogle} />
+          <GoogleConnect ready={!!googleConfig()} mine={myGoogle} lastSync={{ at: syncState.data?.last_run_at ?? null, error: syncState.data?.last_error ?? null }} />
         </Card>
       </section>
 

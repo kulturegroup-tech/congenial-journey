@@ -6,7 +6,9 @@ import { createClient } from "@/lib/supabase/client";
 import { Button, ButtonAnchor, Dialog, Field, FormMessage, Input, SubmitButton, Textarea } from "@/components/form";
 import type { ActionState } from "@/lib/forms";
 import { useSearchParams } from "next/navigation";
-import { addPracticeArea, changeMyPin, disconnectGoogle, saveFirmSettings, saveMember, setCvReading, setLogo, setMemberActive } from "./actions";
+import { addPracticeArea, changeMyPin, disconnectGoogle, saveFirmSettings, saveMember, setCalendarSync, setCvReading, setLogo, setMemberActive } from "./actions";
+import { pingCalendarSync } from "@/components/calendar-ping";
+import { formatDateTime } from "@/lib/format";
 
 export function MemberDialog({ member }: { member?: { full_name: string; email: string; is_admin: boolean } }) {
   return (
@@ -308,7 +310,15 @@ const GOOGLE_NOTES: Record<string, { text: string; ok?: boolean }> = {
 };
 
 /** Settings → Google: connect, reconnect or disconnect your own account. */
-export function GoogleConnect({ ready, mine }: { ready: boolean; mine: { google_email: string; status: string; connected_at: string } | null }) {
+export function GoogleConnect({
+  ready,
+  mine,
+  lastSync,
+}: {
+  ready: boolean;
+  mine: { google_email: string; status: string; connected_at: string; calendar_sync: boolean } | null;
+  lastSync: { at: string | null; error: string | null };
+}) {
   const note = GOOGLE_NOTES[useSearchParams().get("google") ?? ""];
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
@@ -324,6 +334,30 @@ export function GoogleConnect({ ready, mine }: { ready: boolean; mine: { google_
           <Button size="sm" variant="ghost" disabled={pending} onClick={() => start(async () => setErr((await disconnectGoogle()).error ?? null))}>
             {pending ? "Disconnecting…" : "Disconnect"}
           </Button>
+        </div>
+      ) : null}
+      {connected ? (
+        <div className="space-y-1">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={mine.calendar_sync}
+              disabled={pending}
+              onChange={(e) =>
+                start(async () => {
+                  const r = await setCalendarSync(e.target.checked);
+                  setErr(r.error ?? null);
+                  if (!r.error) pingCalendarSync(true);
+                })
+              }
+            />
+            Put my calls, interviews, follow-ups and joinings on my Google Calendar
+          </label>
+          <p className="pl-6 text-[12px] text-muted">
+            {mine.calendar_sync ? "Changes in Covaro reach your calendar within about a minute, whenever anyone on the team has Covaro open. " : "Turning this off takes Covaro's upcoming events back off your calendar. "}
+            {lastSync.at ? `Last synced ${formatDateTime(lastSync.at)}.` : ""}
+            {lastSync.error ? <span className="text-warn"> {lastSync.error}</span> : null}
+          </p>
         </div>
       ) : ready ? (
         <div className="flex flex-wrap items-center gap-3">
