@@ -821,6 +821,47 @@ export type Database = {
         }
         Relationships: []
       }
+      google_connections: {
+        Row: {
+          connected_at: string
+          google_email: string
+          last_error: string | null
+          member_id: string
+          refresh_token_enc: string | null
+          scopes: string[]
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          connected_at?: string
+          google_email: string
+          last_error?: string | null
+          member_id: string
+          refresh_token_enc?: string | null
+          scopes?: string[]
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          connected_at?: string
+          google_email?: string
+          last_error?: string | null
+          member_id?: string
+          refresh_token_enc?: string | null
+          scopes?: string[]
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_connections_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: true
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_rows: {
         Row: {
           batch: string

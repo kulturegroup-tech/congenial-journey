@@ -67,6 +67,7 @@ select id, '<Full Name>', email, true from auth.users where email = '<their emai
 - Invoice prefix (their initials) and **next invoice number 1**
 - Monthly joinings target, when a mandate goes quiet, default cooling-off and CV validity
 - Practice areas: the 99 come with migration 10; add or hide what they don't use
+- Connect Google (Gmail + Calendar): if the firm is on Google Workspace, follow `docs/google-setup.md` with their admin
 - Reading CVs with AI: off until their admin turns it on (and `ANTHROPIC_API_KEY` is set). Ask them first:
   each CV goes to Anthropic's Claude API
 

@@ -6,7 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/member";
 import { cvReaderKeySet } from "@/lib/ai/cv-reader";
 import { AppearancePicker } from "@/components/theme";
-import { ActiveToggle, CvReadingSwitch, FirmForm, LogoForm, MemberDialog, PinForm, PracticeAreaForm } from "./forms";
+import { googleConfig } from "@/lib/google/server";
+import { ActiveToggle, CvReadingSwitch, FirmForm, GoogleConnect, LogoForm, MemberDialog, PinForm, PracticeAreaForm } from "./forms";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -29,14 +30,17 @@ export default function SettingsPage() {
 
 async function SettingsBody() {
   const supabase = await createClient();
-  const [session, team, settings, practices] = await Promise.all([
+  const [session, team, settings, practices, google] = await Promise.all([
     getSession(),
     supabase.from("team_members").select("id, full_name, email, is_admin, active").order("active", { ascending: false }).order("full_name"),
     supabase.from("settings").select("*").single(),
     supabase.from("practice_areas").select("name").eq("active", true).order("sort"),
+    supabase.from("google_connections").select("member_id, google_email, status, connected_at"),
   ]);
   const me = session.state === "member" ? session.member : null;
   const isAdmin = !!me?.is_admin;
+  const googleOf = new Map((google.data ?? []).map((g) => [g.member_id, g]));
+  const myGoogle = me ? (googleOf.get(me.id) ?? null) : null;
 
   return (
     <div className="max-w-4xl space-y-8">
@@ -45,7 +49,7 @@ async function SettingsBody() {
           <h2 className="font-semibold">Team</h2>
           {isAdmin ? <MemberDialog /> : null}
         </div>
-        <Table head={["Name", "Email", "Role", ""]}>
+        <Table head={["Name", "Email", "Role", "Google", ""]}>
           {(team.data ?? []).map((m) => (
             <tr key={m.id} className={m.active ? "" : "opacity-50"}>
               <td className="font-medium">
@@ -53,6 +57,15 @@ async function SettingsBody() {
               </td>
               <td className="text-muted">{m.email}</td>
               <td>{m.is_admin ? <Badge tone="accent">Admin</Badge> : "Recruiter"}{m.active ? "" : " · inactive"}</td>
+              <td className="text-[13px]">
+                {googleOf.get(m.id)?.status === "connected" ? (
+                  <Badge tone="ok">Connected</Badge>
+                ) : googleOf.get(m.id)?.status === "broken" ? (
+                  <Badge tone="warn">Reconnect</Badge>
+                ) : (
+                  <span className="text-faint">—</span>
+                )}
+              </td>
               <td className="whitespace-nowrap text-right">
                 {isAdmin ? (
                   <span className="inline-flex gap-3">
@@ -84,6 +97,17 @@ async function SettingsBody() {
         <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
           <p className="max-w-md text-[13.5px] text-muted">Light, dark, or follow this computer&apos;s setting. Saved on this computer only, so each person picks their own.</p>
           <AppearancePicker />
+        </Card>
+      </section>
+
+      <section id="google" className="scroll-mt-24">
+        <h2 className="mb-2.5 text-[16.5px] font-semibold">Google account</h2>
+        <Card className="space-y-3 p-5">
+          <p className="max-w-2xl text-[13.5px] text-muted">
+            Connect your work Google account so Covaro can send CV shares from your Gmail, show the emails with a candidate or client, and keep calls and
+            interviews in step with your Google Calendar. Emails are read live from Gmail when you look; Covaro doesn&apos;t keep copies.
+          </p>
+          <GoogleConnect ready={!!googleConfig()} mine={myGoogle} />
         </Card>
       </section>
 

@@ -3,9 +3,10 @@
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { useToast } from "@/components/toast";
 import { createClient } from "@/lib/supabase/client";
-import { Button, Dialog, Field, FormMessage, Input, SubmitButton, Textarea } from "@/components/form";
+import { Button, ButtonAnchor, Dialog, Field, FormMessage, Input, SubmitButton, Textarea } from "@/components/form";
 import type { ActionState } from "@/lib/forms";
-import { addPracticeArea, changeMyPin, saveFirmSettings, saveMember, setCvReading, setLogo, setMemberActive } from "./actions";
+import { useSearchParams } from "next/navigation";
+import { addPracticeArea, changeMyPin, disconnectGoogle, saveFirmSettings, saveMember, setCvReading, setLogo, setMemberActive } from "./actions";
 
 export function MemberDialog({ member }: { member?: { full_name: string; email: string; is_admin: boolean } }) {
   return (
@@ -291,6 +292,50 @@ export function LogoForm({ path, canEdit }: { path: string | null; canEdit: bool
         )}
         {err ? <p className="text-[12px] text-danger">{err}</p> : null}
       </div>
+    </div>
+  );
+}
+
+const GOOGLE_NOTES: Record<string, { text: string; ok?: boolean }> = {
+  connected: { text: "Google is connected.", ok: true },
+  denied: { text: "Google wasn't connected: the permission screen was closed or refused." },
+  expired: { text: "That took too long or came from another tab. Press Connect Google again." },
+  "wrong-account": { text: "That was a different Google account. Connect the Google account for your work email." },
+  "missing-access": { text: "Some boxes on Google's screen were unticked. Connect again and leave them all ticked." },
+  "not-set-up": { text: "Google isn't set up for this workspace yet." },
+  "not-on-team": { text: "Only team members can connect Google." },
+  failed: { text: "Couldn't connect Google. Try again." },
+};
+
+/** Settings → Google: connect, reconnect or disconnect your own account. */
+export function GoogleConnect({ ready, mine }: { ready: boolean; mine: { google_email: string; status: string; connected_at: string } | null }) {
+  const note = GOOGLE_NOTES[useSearchParams().get("google") ?? ""];
+  const [pending, start] = useTransition();
+  const [err, setErr] = useState<string | null>(null);
+  const connected = mine?.status === "connected";
+  return (
+    <div className="space-y-2 text-[13.5px]">
+      {note ? <p className={note.ok ? "text-ok" : "text-danger"}>{note.text}</p> : null}
+      {connected ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <span>
+            Connected as <b>{mine.google_email}</b>
+          </span>
+          <Button size="sm" variant="ghost" disabled={pending} onClick={() => start(async () => setErr((await disconnectGoogle()).error ?? null))}>
+            {pending ? "Disconnecting…" : "Disconnect"}
+          </Button>
+        </div>
+      ) : ready ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <ButtonAnchor href="/api/google/connect" variant="primary" size="sm">
+            {mine?.status === "broken" ? "Connect Google again" : "Connect Google"}
+          </ButtonAnchor>
+          {mine?.status === "broken" ? <span className="text-warn">Google stopped accepting the last connection.</span> : null}
+        </div>
+      ) : (
+        <p className="text-muted">Not set up yet: the firm&apos;s Google admin does a one-time setup first (Priyanshi has the steps).</p>
+      )}
+      {err ? <p className="text-danger">{err}</p> : null}
     </div>
   );
 }

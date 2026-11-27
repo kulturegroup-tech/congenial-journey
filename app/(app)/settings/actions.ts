@@ -111,3 +111,22 @@ export async function setLogo(path: string | null) {
   refreshAll();
   return { ok: true };
 }
+
+/** Unlinks the signed-in person's own Google account: Google is told to cancel access, the token is cleared. */
+export async function disconnectGoogle() {
+  const { openToken } = await import("@/lib/google/core");
+  const { forgetAccessToken, googleConfig, revokeToken } = await import("@/lib/google/server");
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  const uid = claims?.claims?.sub;
+  if (!uid) return { error: "You're signed out." };
+  const { data: row } = await supabase.from("google_connections").select("refresh_token_enc").eq("member_id", uid).maybeSingle();
+  const key = googleConfig()?.tokenKey;
+  const token = row?.refresh_token_enc && key ? openToken(row.refresh_token_enc, key) : null;
+  if (token) await revokeToken(token);
+  const { error } = await supabase.from("google_connections").update({ status: "disconnected", refresh_token_enc: null, last_error: null }).eq("member_id", uid);
+  if (error) return { error: dbError(error) };
+  forgetAccessToken(uid);
+  refreshAll();
+  return { ok: true };
+}

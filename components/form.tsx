@@ -57,6 +57,11 @@ export function Button({ variant = "outline", size = "md", className, ...props }
   return <button type="button" data-ripple data-variant={variant} {...props} className={cx(buttonBase, variants[variant], sizes[size], className)} />;
 }
 
+/** A button-styled plain link, for addresses that must not be fetched ahead (sign-ins, downloads). */
+export function ButtonAnchor({ variant = "outline", size = "md", className, ...props }: ComponentProps<"a"> & { variant?: Variant; size?: "sm" | "md" }) {
+  return <a data-ripple data-variant={variant} {...props} className={cx(buttonBase, variants[variant], sizes[size], className)} />;
+}
+
 export function ButtonLink({ variant = "outline", size = "md", className, ...props }: ComponentProps<typeof Link> & { variant?: Variant; size?: "sm" | "md" }) {
   return <Link data-ripple data-variant={variant} {...props} className={cx(buttonBase, variants[variant], sizes[size], className)} />;
 }
