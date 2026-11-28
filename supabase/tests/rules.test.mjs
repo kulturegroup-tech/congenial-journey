@@ -633,6 +633,11 @@ console.log('\nSafe updates');
     }
   }
   ok(bad.length === 0, `no UPDATE or DELETE without WHERE in ${fns.length} functions${bad.length ? ': ' + bad.join(' | ') : ''}`);
+  // Supabase's security check flags functions whose search_path a caller could change.
+  const loose = await q(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                         where n.nspname = 'public' and p.prolang in (select oid from pg_language where lanname in ('plpgsql', 'sql'))
+                           and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) c where c like 'search_path=%')`);
+  ok(loose.length === 0, `every function fixes its search_path${loose.length ? ': ' + loose.map((r) => r.proname).join(', ') : ''}`);
 }
 console.log('\nPolicies run once per query');
 {

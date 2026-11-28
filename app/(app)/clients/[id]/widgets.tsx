@@ -218,7 +218,11 @@ function portalStatus(a: PortalRow | null) {
 /** A contact's portal: who can see it, and for admins, turning it on, new codes and turning it off. */
 export function PortalAccess({ contact, access, isAdmin, onRoles }: { contact: { id: string; name: string }; access: PortalRow | null; isAdmin: boolean; onRoles: number }) {
   const status = portalStatus(access);
-  if (!isAdmin) return status ? <span className="block text-[12.5px] text-muted">{status}</span> : null;
+  if (!isAdmin) {
+    if (status) return <span className="block text-[12.5px] text-muted">{status}</span>;
+    // Only admins hand out portal access; say so where it could matter, so the feature isn't invisible.
+    return onRoles > 0 ? <span className="block text-[12.5px] text-faint">No client portal yet · an admin can turn it on</span> : null;
+  }
   return (
     <Dialog
       title={`Client portal for ${contact.name}`}
